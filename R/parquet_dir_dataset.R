@@ -3,7 +3,7 @@
 #' @importFrom tools file_path_as_absolute
 #' @importFrom dplyr collect
 #' @export
-ParquetDataDir = dataset(
+parquet_dir_dataset = dataset(
   name = "ParquetDataDir",
   initialize = function(dirname, expected_rows = NULL, verbose = TRUE) {
     self$dirname = file_path_as_absolute(dirname)
@@ -39,7 +39,33 @@ ParquetDataDir = dataset(
   }
 )
 
-#' @export
-parquet_dir_dataset = function(dirname, expected_rows = NULL, ...) {
-  ParquetDataDir(dirname, expected_rows)
+get_spectrum <- function(x) {
+  ret = x |> 
+    as.matrix() |>
+    fft() 
+  ret[seq_len(ceiling(nrow(ret) / 2)),]
 }
+
+#' @importFrom torch dataset
+#' @importFrom dplyr select
+#' @importFrom torch torch_tensor torch_float32
+#' @export
+spectral_tensor_adaptor = dataset(
+  name = "SpectralTensorAdaptor",
+  initialize = function(dsg, device = NULL, dtype = torch_float32()) {
+    self$dsg = dsg
+    self$device = device
+    self$dtype = dtype
+  },
+  .getitem = function(index) {
+    browser()
+    self$dsg$.getitem(index) |>
+      select(X:Z) |>
+      get_spectrum() |>
+      torch_tensor(dtype = self$dtype, device = self$device)
+  },
+  .length = function() {
+    self$dsg$.length()
+  }
+)
+
