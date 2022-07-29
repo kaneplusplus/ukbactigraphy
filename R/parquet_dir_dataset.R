@@ -39,11 +39,11 @@ parquet_dir_dataset = dataset(
   }
 )
 
+#' @importFrom torch torch_fft_fft
 get_spectrum <- function(x) {
-  ret = x |> 
-    as.matrix() |>
-    fft() 
-  ret[seq_len(ceiling(nrow(ret) / 2)),]
+  ret = torch_fft_fft(x, dim = 1, norm = "ortho") 
+  ret = torch_sqrt(ret$real^2 + ret$imag^2)
+  ret[seq_len(ceiling(ret$shape[1] / 2)),]
 }
 
 #' @importFrom torch dataset
@@ -58,11 +58,11 @@ spectral_tensor_adaptor = dataset(
     self$dtype = dtype
   },
   .getitem = function(index) {
-    browser()
     self$dsg$.getitem(index) |>
       select(X:Z) |>
-      get_spectrum() |>
-      torch_tensor(dtype = self$dtype, device = self$device)
+      as.matrix() |>
+      torch_tensor(dtype = self$dtype, device = self$device) |>
+      get_spectrum() 
   },
   .length = function() {
     self$dsg$.length()
