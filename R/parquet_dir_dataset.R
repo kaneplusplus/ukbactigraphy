@@ -3,7 +3,8 @@
 #' @importFrom tools file_path_as_absolute
 #' @importFrom dplyr collect
 #' @export
-parquet_dir_dataset = dataset(
+#parquet_dir_dataset = dataset(
+ParquetDataDir = dataset(
   name = "ParquetDataDir",
   initialize = function(dirname, expected_rows = NULL, verbose = TRUE) {
     self$dirname = file_path_as_absolute(dirname)
@@ -11,7 +12,7 @@ parquet_dir_dataset = dataset(
     if (!dir.exists(dirname)) {
       stop(paste("Directory", dirname, "does not exist."))
     }
-    self$fns = dir(dirname)
+    self$fns = dir(self$dirname)
     if (verbose) {
       msg = sprintf("%d files found in %s\n", length(self$fns), self$dirname)
       cat(msg)
@@ -50,7 +51,7 @@ get_spectrum <- function(x) {
 #' @importFrom dplyr select
 #' @importFrom torch torch_tensor torch_float32
 #' @export
-spectral_tensor_adaptor = dataset(
+SpectralTensorAdaptor = dataset(
   name = "SpectralTensorAdaptor",
   initialize = function(dsg, device = NULL, dtype = torch_float32()) {
     self$dsg = dsg
