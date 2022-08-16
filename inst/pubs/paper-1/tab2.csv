@@ -1,0 +1,25 @@
+"activity","medical variable","Condition 1","Condition 2","p-value"
+"high","nap during day","Never/rarely","Usually",0
+"mid","nap during day","Never/rarely","Usually",0
+"low","nap during day","Never/rarely","Usually",0
+"high","neuroticism score","0","11",0.0256
+"mid","neuroticism score","0","11",0.113
+"low","neuroticism score","0","11",0.0111
+"high","overall health rating","Excellent","Poor",0
+"mid","overall health rating","Excellent","Poor",0
+"low","overall health rating","Excellent","Poor",0
+"high","sleep duration","18","-3",0.0256
+"mid","sleep duration","18","-3",0.3628
+"low","sleep duration","18","-3",0.0073
+"high","sleeping too much","No","Yes",0
+"mid","sleeping too much","No","Yes",0
+"low","sleeping too much","No","Yes",0
+"high","sleeplessness insomnia","Never/rarely","Usually",0
+"mid","sleeplessness insomnia","Never/rarely","Usually",0
+"low","sleeplessness insomnia","Never/rarely","Usually",0
+"high","snoring","No","Yes",0
+"mid","snoring","No","Yes",0
+"low","snoring","No","Yes",0
+"high","trouble falling asleep","No","Yes",0.0272
+"mid","trouble falling asleep","No","Yes",0.0116
+"low","trouble falling asleep","No","Yes",8e-04
