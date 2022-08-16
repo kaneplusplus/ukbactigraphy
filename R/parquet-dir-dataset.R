@@ -4,8 +4,8 @@
 #' @importFrom dplyr collect
 #' @export
 #parquet_dir_dataset = dataset(
-ParquetDataDir = dataset(
-  name = "ParquetDataDir",
+ParquetDataDirSmall = dataset(
+  name = "ParquetDataDirSmall",
   initialize = function(dirname, expected_rows = NULL, verbose = TRUE) {
     self$dirname = file_path_as_absolute(dirname)
     self$expected_rows = expected_rows
@@ -17,6 +17,89 @@ ParquetDataDir = dataset(
       msg = sprintf("%d files found in %s\n", length(self$fns), self$dirname)
       cat(msg)
     }
+  },
+  .getitem = function(index) {
+    if (index > length(self$fns) || index < 1) {
+      stop("Index out of bounds")
+    }
+    pqr = 
+      read_parquet(
+        file.path(self$dirname, self$fns[index]), 
+        as_data_frame = FALSE
+      )
+    if (!is.null(self$expected_rows)) {
+      if (nrow(pqr) < self$expected_rows) {
+        warning("Data set has fewer lines than number of expected samples.")
+      }
+      pqr = pqr[seq_len(self$expected_rows),]
+    } 
+    return(collect(pqr))
+  },
+  .length = function() {
+    length(self$fns)
+  }
+)
+
+
+#' @importFrom arrow read_parquet
+#' @importFrom purrr map_dbl
+#' @importFrom dplyr summarize n
+sample_file_name_and_offset = function(sfc, num_samples) {
+  ret = sfc[sample.int(nrow(sfc), num_samples, replace = TRUE),]
+  ret$start = map_dbl(ret$nr, ~ sample.int(.x - num_rows, 1))
+  ret
+}
+
+#' @importFrom arrow read_parquet
+#' @importFrom torch dataset
+#' @importFrom tools file_path_as_absolute
+#' @importFrom dplyr collect
+#' @importFrom purrr map_dfr map_chr
+#' @export
+#parquet_dir_dataset = dataset(
+ParquetDataDirSample = dataset(
+  name = "ParquetDataDirSample",
+  initialize = function(num_rows,
+                        training_files, 
+                        num_train = 0, 
+                        holdout_files,
+                        num_holdout = 0,
+                        verbose = TRUE) {
+
+    self$num_rows = num_rows
+    self$training_files = map_chr(training_files, file_path_as_absolute)
+    self$num_train = num_train
+    self$holdout_files = map_chr(holdout_files, file_path_as_absolute)
+    self$num_holdout = num_holdout
+    if (any(!file.exists(training_files))) {
+      stop(paste("Training files missing"))
+    }
+    if (any(!file.exists(holdout_files))) {
+      stop(paste("Holdout files missing"))
+    }
+  
+    if (verbose) {
+      cat("Calculating number of samples in files.\n")
+    }
+    nr_pqf = \(x) nrow(read_parquet(x, as_data_frame = FALSE))
+    self$training_file_counts = tibble(
+      fn = training_files,
+      nr = map_dbl(fn, nr_pqf)
+    )
+    self$training_samples = sample_file_name_and_offset(
+      self$training_file_counts,
+      self$num_train
+    )
+
+    self$holdout_file_counts = tibble(
+      fn = holdout_files,
+      nr = map_dbl(fn, nr_pqf)
+    )
+    self$holdout_samples = sample_file_name_and_offset(
+      self$holdout_file_counts,
+      self$num_holdout
+    )
+    
   },
   .getitem = function(index) {
     if (index > length(self$fns) || index < 1) {
