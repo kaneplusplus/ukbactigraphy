@@ -1,5 +1,5 @@
 Package: ukbactigraphy
-Title: What the Package Does (One Line, Title Case)
+Title: Models and Utilities for UK Biobank Actigraphy
 Version: 0.0.1
 Authors@R: c(
   person(given = "Michael J.",
@@ -16,7 +16,9 @@ Depends:
   arrow,
   dplyr,
   tools,
-  torch
+  torch,
+  purrr,
+  furrr
 License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

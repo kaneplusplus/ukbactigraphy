@@ -55,6 +55,7 @@ sample_file_name_and_offset = function(sfc, num_samples) {
 #' @importFrom tools file_path_as_absolute
 #' @importFrom dplyr collect
 #' @importFrom purrr map_dfr map_chr
+#' @importFrom furrr future_map_dbl
 #' @export
 #parquet_dir_dataset = dataset(
 ParquetDataDirSample = dataset(
@@ -84,7 +85,7 @@ ParquetDataDirSample = dataset(
     nr_pqf = \(x) nrow(read_parquet(x, as_data_frame = FALSE))
     self$training_file_counts = tibble(
       fn = training_files,
-      nr = map_dbl(fn, nr_pqf)
+      nr = future_map_dbl(fn, nr_pqf)
     )
     self$training_samples = sample_file_name_and_offset(
       self$training_file_counts,
@@ -102,24 +103,15 @@ ParquetDataDirSample = dataset(
     
   },
   .getitem = function(index) {
-    if (index > length(self$fns) || index < 1) {
+    if (index > nrow(self$training_samples) || index < 1) {
       stop("Index out of bounds")
     }
-    pqr = 
-      read_parquet(
-        file.path(self$dirname, self$fns[index]), 
-        as_data_frame = FALSE
-      )
-    if (!is.null(self$expected_rows)) {
-      if (nrow(pqr) < self$expected_rows) {
-        warning("Data set has fewer lines than number of expected samples.")
-      }
-      pqr = pqr[seq_len(self$expected_rows),]
-    } 
-    return(collect(pqr))
+    pqr = read_parquet(self$training_samples$fn[index], as_data_frame = FALSE)
+    start_row = self$training_samples$start[index]
+    return(pqr[start_row:(start_row + self$num_rows - 1),])
   },
   .length = function() {
-    length(self$fns)
+    nrow(self$training_samples)
   }
 )
 
@@ -131,7 +123,7 @@ get_spectrum <- function(x) {
 }
 
 #' @importFrom torch dataset
-#' @importFrom dplyr select
+#' @importFrom dplyr select collect
 #' @importFrom torch torch_tensor torch_float32
 #' @export
 SpectralTensorAdaptor = dataset(
@@ -142,11 +134,25 @@ SpectralTensorAdaptor = dataset(
     self$dtype = dtype
   },
   .getitem = function(index) {
-    self$dsg$.getitem(index) |>
+    tm = self$dsg$.getitem(index) |>
       select(X:Z) |>
-      as.matrix() |>
-      torch_tensor(dtype = self$dtype, device = self$device) |>
-      get_spectrum() 
+      collect() |>
+      as.matrix() 
+
+    nr = nrow(tm)
+    if (nr %% 3 != 0) {
+      warning("Number of rows is not divisible by 3.")
+    }
+
+    starts = nr * c(0, 1, 2) / 3 + 1
+    ends = nr * c(1, 2, 3) / 3 
+    ms = map(
+      seq_along(starts), 
+      ~ tm[starts[.x]:ends[.x], ] |> 
+        torch_tensor(dtype = self$dtype, device = self$device) |>
+        get_spectrum()
+    )
+    return(list(y = ms[[2]], x = ms[c(1, 3)]))
   },
   .length = function() {
     self$dsg$.length()

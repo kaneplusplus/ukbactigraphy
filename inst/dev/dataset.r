@@ -21,7 +21,10 @@ if (0) {
   holdout_files = file.path("parquet-subset", fns[1])
   num_holdout = 500
   num_rows = 100 * 60 * 60
-
+  
+  library(future)
+  plan(mulitcore)
+  document()
   ds = ParquetDataDirSample(
     num_rows,
     training_files,
@@ -29,4 +32,9 @@ if (0) {
     holdout_files,
     num_holdout
   )
+  ds$.length()
+  ds$.getitem(10)
+
+  sds = SpectralTensorAdaptor(ds)
+  sds$.getitem(1)
 }
