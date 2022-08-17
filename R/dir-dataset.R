@@ -44,6 +44,7 @@ ParquetDataDirSmall = dataset(
 #' @importFrom arrow read_parquet
 #' @importFrom purrr map_dbl
 #' @importFrom dplyr summarize n
+#' @export
 sample_file_name_and_offset = function(sfc, num_samples) {
   ret = sfc[sample.int(nrow(sfc), num_samples, replace = TRUE),]
   ret$start = map_dbl(ret$nr, ~ sample.int(.x - num_rows, 1))
@@ -54,72 +55,56 @@ sample_file_name_and_offset = function(sfc, num_samples) {
 #' @importFrom torch dataset
 #' @importFrom tools file_path_as_absolute
 #' @importFrom dplyr collect
-#' @importFrom purrr map_dfr map_chr
+#' @importFrom purrr map_dfr map_chr map_dbl
 #' @importFrom furrr future_map_dbl
 #' @export
 #parquet_dir_dataset = dataset(
 ParquetDataDirSample = dataset(
   name = "ParquetDataDirSample",
   initialize = function(num_rows,
-                        training_files, 
-                        num_train = 0, 
-                        holdout_files,
-                        num_holdout = 0,
+                        file_names, 
+                        num_samples = 0, 
                         verbose = TRUE) {
 
     self$num_rows = num_rows
-    self$training_files = map_chr(training_files, file_path_as_absolute)
-    self$num_train = num_train
-    self$holdout_files = map_chr(holdout_files, file_path_as_absolute)
-    self$num_holdout = num_holdout
-    if (any(!file.exists(training_files))) {
+    self$file_names = map_chr(file_names, file_path_as_absolute)
+    self$num_samples = num_samples
+    if (any(!file.exists(file_names))) {
       stop(paste("Training files missing"))
-    }
-    if (any(!file.exists(holdout_files))) {
-      stop(paste("Holdout files missing"))
     }
   
     if (verbose) {
       cat("Calculating number of samples in files.\n")
     }
     nr_pqf = \(x) nrow(read_parquet(x, as_data_frame = FALSE))
-    self$training_file_counts = tibble(
-      fn = training_files,
-      nr = future_map_dbl(fn, nr_pqf)
-    )
-    self$training_samples = sample_file_name_and_offset(
-      self$training_file_counts,
-      self$num_train
-    )
-
-    self$holdout_file_counts = tibble(
-      fn = holdout_files,
+    self$file_row_counts = tibble(
+      fn = file_names,
       nr = map_dbl(fn, nr_pqf)
     )
-    self$holdout_samples = sample_file_name_and_offset(
-      self$holdout_file_counts,
-      self$num_holdout
+    self$samples = sample_file_name_and_offset(
+      self$file_row_counts,
+      self$num_samples
     )
-    
   },
   .getitem = function(index) {
-    if (index > nrow(self$training_samples) || index < 1) {
+    if (index > nrow(self$file_row_counts) || index < 1) {
       stop("Index out of bounds")
     }
-    pqr = read_parquet(self$training_samples$fn[index], as_data_frame = FALSE)
-    start_row = self$training_samples$start[index]
+    pqr = read_parquet(self$file_row_counts$fn[index], as_data_frame = FALSE)
+    start_row = self$samples$start[index]
     return(pqr[start_row:(start_row + self$num_rows - 1),])
   },
   .length = function() {
-    nrow(self$training_samples)
+    return(self$num_samples)
   }
 )
 
 #' @importFrom torch torch_fft_fft
+#' @export
 get_spectrum <- function(x) {
   ret = torch_fft_fft(x, dim = 1, norm = "ortho") 
   ret = torch_sqrt(ret$real^2 + ret$imag^2)
-  ret[seq_len(ceiling(ret$shape[1] / 2)),]
+  return(ret[seq_len(ceiling(ret$shape[1] / 2)),])
 }
 
 #' @importFrom torch dataset
@@ -155,7 +140,7 @@ SpectralTensorAdaptor = dataset(
     return(list(y = ms[[2]], x = ms[c(1, 3)]))
   },
   .length = function() {
-    self$dsg$.length()
+    return(self$dsg$.length())
   }
 )
 
