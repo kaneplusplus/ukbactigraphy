@@ -15,7 +15,6 @@ num_rows = 100 * 60 * 60
 
 sds = ParquetDataDirSample(num_rows, training_files, num_train) |>
   SpectralTensorAdaptor()
-sds = SpectralTensorAdaptor(pdd)
 
 ss_model = SelfSupervisedSpectral()
 tm = sds |>
