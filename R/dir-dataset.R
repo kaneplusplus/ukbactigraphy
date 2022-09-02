@@ -87,7 +87,7 @@ ParquetDataDirSample = dataset(
     )
   },
   .getitem = function(index) {
-    if (index > nrow(self$file_row_counts) || index < 1) {
+    if (index > nrow(self$samples) || index < 1) {
       stop("Index out of bounds")
     }
     pqr = read_parquet(self$file_row_counts$fn[index], as_data_frame = FALSE)
