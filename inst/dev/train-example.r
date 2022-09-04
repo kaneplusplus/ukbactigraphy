@@ -14,8 +14,16 @@ num_rows = 100 * 60 * 60
 sds = ParquetDataDirSample(num_rows, training_files, num_train) |>
   SpectralTensorAdaptor()
 
-ss_model = SelfSupervisedSpectral()
 tm = sds |>
-  dataloader() |>
-  train_ssm(model = ss_model)
+  dataloader(batch_size = 15, shuffle = FALSE)
+
+it = tm$.iter()
+s = it$.next()
+ss_model = SelfSupervisedSpectral()
+ss_model$forward(s)
+
+
+#tm = sds |>
+#  dataloader(batch_size = 15, shuffle = FALSE) |>
+#  train_ssm(model = ss_model)
 
