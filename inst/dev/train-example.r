@@ -1,29 +1,26 @@
 library(devtools)
-library(future)
-
-#plan(multicore)
+library(torch)
+library(luz)
 
 document()
 
 fns = dir("parquet-subset")
 training_files = file.path("parquet-subset", fns[-1])
 num_train = 10000
-holdout_files = file.path("parquet-subset", fns[1])
+testing_files = file.path("parquet-subset", fns[1])
 num_rows = 100 * 60 * 60
 
-sds = ParquetDataDirSample(num_rows, training_files, num_train) |>
-  SpectralTensorAdaptor()
+train_dl = ParquetDataDirSample(num_rows, training_files, num_train) |>
+  SpectralTensorAdaptor() |>
+  dataloader()
 
-tm = sds |>
-  dataloader(batch_size = 15, shuffle = FALSE)
+test_dl = ParquetDataDirSample(num_rows, testing_files, num_train) |>
+  SpectralTensorAdaptor() |>
+  dataloader()
 
-it = tm$.iter()
-s = it$.next()
-ss_model = SelfSupervisedSpectral()
-ss_model$forward(s)
+# May want to switch another loss.
 
-
-#tm = sds |>
-#  dataloader(batch_size = 15, shuffle = FALSE) |>
-#  train_ssm(model = ss_model)
+ss_model = SelfSupervisedSpectral() |>
+  setup(loss = nnf_mse_loss, optimizer = optim_adam) |>
+  fit(train_dl, epochs = 1, valid_data = test_dl)
 

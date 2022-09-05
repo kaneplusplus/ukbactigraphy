@@ -138,7 +138,7 @@ SpectralTensorAdaptor = dataset(
         get_spectrum()
     ) |>
     map(~ .x$permute(c(2, 1))) 
-    return(list(y = ms[[2]], x = ms[c(1, 3)]))
+    return(list(x = torch_stack(ms[c(1, 3)], dim = 1), y = ms[[2]]))
   },
   .length = function() {
     return(self$dsg$.length())
