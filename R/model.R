@@ -13,18 +13,17 @@ SelfSupervisedSpectral = function() {
         )
         self$nn_l2 = nn_sequential(
           nn_linear(1800, 600),
-          nn_linear(600, 600)
         )
     
-        self$nn_l3_c1 = nn_sequential(
+        self$nn_l3_x = nn_sequential(
           nn_linear(1200, 60000)
         )
 
-        self$nn_l3_c2 = nn_sequential(
+        self$nn_l3_y = nn_sequential(
           nn_linear(1200, 60000)
         )
 
-        self$nn_l3_c3 = nn_sequential(
+        self$nn_l3_z = nn_sequential(
           nn_linear(1200, 60000)
         )
         self$initialized = TRUE
@@ -46,7 +45,7 @@ SelfSupervisedSpectral = function() {
 
       tc = torch_cat(list(out1, out2), 2) 
       torch_stack(
-        list(self$nn_l3_c1(tc), self$nn_l3_c2(tc), self$nn_l3_c3(tc)),
+        list(self$nn_l3_x(tc), self$nn_l3_y(tc), self$nn_l3_z(tc)),
         dim = 2
       )
     }

@@ -12,7 +12,7 @@ num_rows = 100 * 60 * 60
 
 train_dl = ParquetDataDirSample(num_rows, training_files, num_train) |>
   SpectralTensorAdaptor() |>
-  dataloader()
+  dataloader(batch_size = 1)
 
 test_dl = ParquetDataDirSample(num_rows, testing_files, num_train) |>
   SpectralTensorAdaptor() |>
