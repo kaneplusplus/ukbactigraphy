@@ -59,8 +59,8 @@ sample_file_name_and_offset = function(sfc, num_samples) {
 #' @importFrom furrr future_map_dbl
 #' @export
 #parquet_dir_dataset = dataset(
-ParquetDataDirSample = dataset(
-  name = "ParquetDataDirSample",
+ParquetDataDirThreeWindowSample = dataset(
+  name = "ParquetDataDirThreeWindowSample",
   initialize = function(num_rows,
                         file_names, 
                         num_samples = 0, 
@@ -92,10 +92,34 @@ ParquetDataDirSample = dataset(
     }
     pqr = read_parquet(self$samples$fn[index], as_data_frame = FALSE)
     start_row = self$samples$start[index]
-    return(pqr[start_row:(start_row + self$num_rows - 1),])
+    starts = self$num_rows * c(0, 1, 2) / 3 + start_row
+    ends = self$num_rows * c(1, 2, 3) / 3 + start_row - 1
+    return(
+      map(
+        seq_along(starts), 
+        ~ pqr[starts[.x]:ends[.x], c("X", "Y", "Z")] |>
+          collect() |>
+          as.matrix() |>
+          torch_tensor(dtype = self$dtype, device = self$device) |>
+          torch_transpose(2, 1)
+      ) |> torch_stack(dim = 1)
+    )
   },
   .length = function() {
     return(self$num_samples)
+  }
+)
+
+ParquetDataDirWindowSample = dataset(
+  name = "ParquetDataDirWindowSample",
+  initialize = function(pdd3ws) {
+    self$pdd3ws = pdd3ws
+  },
+  .getitem = function(index) {
+    return(self$pdd3ws$.getitem(index)[2,,])
+  },
+  .length = function() {
+    return(self$pdd3ws$num_samples)
   }
 )
 
@@ -109,7 +133,7 @@ get_spectrum <- function(x) {
 
 #' @importFrom torch dataset
 #' @importFrom dplyr select collect
-#' @importFrom torch torch_tensor torch_float32
+#' @importFrom torch torch_tensor torch_sqrt
 #' @export
 SpectralTensorAdaptor = dataset(
   name = "SpectralTensorAdaptor",
@@ -120,28 +144,29 @@ SpectralTensorAdaptor = dataset(
   },
   .getitem = function(index) {
     tm = self$dsg$.getitem(index) |>
-      select(X:Z) |>
-      collect() |>
-      as.matrix() 
-
-    nr = nrow(tm)
-    if (nr %% 3 != 0) {
-      warning("Number of rows is not divisible by 3.")
-    }
-
-    starts = nr * c(0, 1, 2) / 3 + 1
-    ends = nr * c(1, 2, 3) / 3 
-    ms = map(
-      seq_along(starts), 
-      ~ tm[starts[.x]:ends[.x], ] |> 
-        torch_tensor(dtype = self$dtype, device = self$device) |>
-        get_spectrum()
-    ) |>
-    map(~ .x$permute(c(2, 1))) 
-    return(list(x = torch_stack(ms[c(1, 3)], dim = 1), y = ms[[2]]))
+      torch_fft_fft(norm = "ortho")
+    ret = torch_sqrt(tm$real^2 + tm$imag^2)
+    return(ret[,,seq_len(ceiling(last(ret$shape) / 2))])
   },
   .length = function() {
     return(self$dsg$.length())
   }
 )
 
+#' @importFrom torch dataset
+#' @importFrom dplyr select collect
+#' @importFrom torch torch_stack
+#' @export
+ThreeWindowSelfSupervisedDataSet = dataset(
+  name = "ThreeWindowSelfSupervisedDataSet",
+  initialize = function(dsg) {
+    self$dsg = dsg
+  },
+  .getitem = function(index) {
+    dsgd = self$dsg$.getitem(index)
+    return(list(x = dsgd[c(1, 3),,], y = dsgd[2,,]))
+  },
+  .length = function() {
+    return(self$dsg$.length())
+  }
+)
