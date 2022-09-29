@@ -3,7 +3,6 @@
 #' @importFrom tools file_path_as_absolute
 #' @importFrom dplyr collect
 #' @export
-#parquet_dir_dataset = dataset(
 ParquetDataDirSmall = dataset(
   name = "ParquetDataDirSmall",
   initialize = function(dirname, expected_rows = NULL, verbose = TRUE) {
@@ -51,26 +50,14 @@ sample_file_name_and_offset = function(sfc, num_samples) {
   ret
 }
 
-#' @importFrom arrow read_parquet
-#' @importFrom torch dataset
-#' @importFrom tools file_path_as_absolute
-#' @importFrom dplyr collect
-#' @importFrom purrr map_dfr map_chr map_dbl
-#' @importFrom furrr future_map_dbl
-#' @export
-#parquet_dir_dataset = dataset(
-ParquetDataDirThreeWindowSample = dataset(
-  name = "ParquetDataDirThreeWindowSample",
-  initialize = function(num_rows,
-                        file_names, 
-                        num_samples = 0, 
-                        verbose = TRUE) {
-
+ParquetDataFileSample = dataset(
+  name = "ParquetDataFileSample",
+  initialize = function(num_rows, file_names, num_samples = 0, verbose = TRUE) {
     self$num_rows = num_rows
     self$file_names = map_chr(file_names, file_path_as_absolute)
     self$num_samples = num_samples
     if (any(!file.exists(file_names))) {
-      stop(paste("Training files missing"))
+      stop(paste("Files could not be found."))
     }
   
     if (verbose) {
@@ -91,35 +78,48 @@ ParquetDataDirThreeWindowSample = dataset(
       stop("Index out of bounds")
     }
     pqr = read_parquet(self$samples$fn[index], as_data_frame = FALSE)
-    start_row = self$samples$start[index]
+    return(
+      pqr[self$samples$start[index]:(self$samples$start[index] + num_rows -1),]
+    )
+  },
+  get_samples = function() {
+    self$samples
+  },
+  get_num_rows = function() {
+    self$num_rows
+  }
+)
+
+#' @importFrom arrow read_parquet
+#' @importFrom torch dataset
+#' @importFrom tools file_path_as_absolute
+#' @importFrom dplyr collect
+#' @importFrom purrr map_dfr map_chr map_dbl
+#' @importFrom furrr future_map_dbl
+#' @export
+#parquet_dir_dataset = dataset(
+ParquetDataFileThreeWindowSample = dataset(
+  name = "ParquetDataFileThreeWindowSample",
+  inherit = ParquetDataFileSample,
+  .getitem = function(index) {
+    if (index > nrow(self$samples) || index < 1) {
+      stop("Index out of bounds")
+    }
+    pqr = super$.getitem(index)
+    start_row = 1
     starts = self$num_rows * c(0, 1, 2) / 3 + start_row
     ends = self$num_rows * c(1, 2, 3) / 3 + start_row - 1
     return(
       map(
         seq_along(starts), 
-        ~ pqr[starts[.x]:ends[.x], c("X", "Y", "Z")] |>
-          collect() |>
-          as.matrix() |>
-          torch_tensor(dtype = self$dtype, device = self$device) |>
-          torch_transpose(2, 1)
-      ) |> torch_stack(dim = 1)
-    )
+        ~ pqr[starts[.x]:ends[.x], c("X", "Y", "Z")]
+      )
+    ) 
+#|>
+#    )
   },
   .length = function() {
     return(self$num_samples)
-  }
-)
-
-ParquetDataDirWindowSample = dataset(
-  name = "ParquetDataDirWindowSample",
-  initialize = function(pdd3ws) {
-    self$pdd3ws = pdd3ws
-  },
-  .getitem = function(index) {
-    return(self$pdd3ws$.getitem(index)[2,,])
-  },
-  .length = function() {
-    return(self$pdd3ws$num_samples)
   }
 )
 
@@ -138,18 +138,35 @@ get_spectrum <- function(x) {
 SpectralTensorAdaptor = dataset(
   name = "SpectralTensorAdaptor",
   initialize = function(dsg, device = NULL, dtype = torch_float32()) {
-    self$dsg = dsg
+    if (!inherits(self$dsg, "ParquetDataFileSample")) {
+      stop("dsg must be derived from ParquetDataFileSample")
+    }
+    self$dsg = dsg # This should be derived from ParquetDataFileSample
     self$device = device
     self$dtype = dtype
   },
   .getitem = function(index) {
+    browser()
     tm = self$dsg$.getitem(index) |>
+      map(
+        ~ collect(.x) |>
+          as.matrix() |>
+          torch_tensor(dtype = self$dtype, device = self$device) |>
+          torch_transpose(2, 1) 
+      ) |>
+      torch_stack(dim = 1) |>
       torch_fft_fft(norm = "ortho")
     ret = torch_sqrt(tm$real^2 + tm$imag^2)
     return(ret[,,seq_len(ceiling(last(ret$shape) / 2))])
   },
   .length = function() {
     return(self$dsg$.length())
+  },
+  get_sample_data = function() {
+    self$dsg$samples
+  },
+  get_num_rows = function() {
+    self$dsg$num_rows
   }
 )
 
@@ -164,9 +181,25 @@ ThreeWindowSelfSupervisedDataSet = dataset(
   },
   .getitem = function(index) {
     dsgd = self$dsg$.getitem(index)
-    return(list(x = dsgd[c(1, 3),,], y = dsgd[2,,]))
+    return(
+      list(
+        x = dsgd[c(1, 3),,],
+        y = dsgd[2,,]
+      )
+    )
   },
   .length = function() {
     return(self$dsg$.length())
+  },
+  get_sample_data = function() {
+    self$dsg$samples
+  },
+  get_num_rows = function() {
+    self$dsg$num_rows
   }
+)
+
+SummaryOutcomeActgraphyDataSet = dataset(
+  name = "SummaryOutcomeActigraphyDataSet",
+  initialize = function(
 )
