@@ -1,3 +1,7 @@
+#' @export
+contr.onehot = function(x, sparse = FALSE) {
+  contr.treatment(x, contrasts = FALSE, sparse = sparse)
+}
 
 #' @param d an object inheriting from type data.frame.
 #' @param f a formula.
@@ -39,14 +43,15 @@ model_tensor =
   fcn = names(fcl)[fcl]
   
   # If you don't supply and contrast.arg, then you get one-hot encoding.
-  contr_arg = as.list(rep("contr.onehot", length(setdiff(fcn, contrasts.arg))))
-  names(contr_arg) = setdiff(fcn, contr_arg)
+#  contr_arg = as.list(rep("contr.onehot", length(setdiff(fcn, contrasts.arg))))
+  contr_arg = map(setdiff(fcn, names(contrasts.arg)), ~ contr.onehot)
+  names(contr_arg) = setdiff(fcn, names(contrasts.arg))
   contr_arg = c(contrasts.arg, contr_arg)
-
   mt = model.matrix(f, d, contrasts.arg = contr_arg)
-  contr_map = d |> 
-    select_if(is.factor) |>
-    map(~contr.onehot(levels(.x)))
+  for (i in which(map_lgl(contr_arg, is.character))) {
+    contr_arg[[i]] = eval(parse(text = contr_arg[[i]]))
+  }
+  contr_map = contr_arg
   
   cnm = colnames(mt)
 
@@ -60,11 +65,6 @@ model_tensor =
   )
   class(ret) = c("model_tensor")
   return(ret)
-}
-
-#' @export
-contr.onehot = function(x, sparse = FALSE) {
-  contr.treatment(x, contrasts = FALSE, sparse = sparse)
 }
 
 #' @export

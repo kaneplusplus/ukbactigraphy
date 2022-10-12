@@ -97,6 +97,9 @@ ParquetDataFileSample = dataset(
   },
   get_num_rows = function() {
     self$num_rows
+  },
+  .length = function() {
+    nrow(self$samples)
   }
 )
 
@@ -165,19 +168,36 @@ SpectralTensorAdaptor = dataset(
   },
   getitem = function(index) {
     items = self$dsg$getitem(index)
-    tm = items$data |>
-      map(
-        ~ collect(.x) |>
-          as.matrix() |>
-          torch_tensor(dtype = self$dtype, device = self$device) |>
-          torch_transpose(2, 1) 
-      ) |>
-      torch_stack(dim = 1) |>
-      torch_fft_fft(norm = "ortho")
+    if (is.list(items$data)) {
+      tm = items$data |>
+        map(
+          ~ select(.x, X:Z) |>
+            collect() |>
+            as.matrix() |>
+            torch_tensor(dtype = self$dtype, device = self$device) |>
+            torch_transpose(2, 1) 
+        ) |>
+        torch_stack(dim = 1)
+      tl = TRUE
+    } else {
+      tm = items$data |>
+        select(X:Z) |>
+        collect() |>
+        as.matrix() |>
+        torch_tensor(dtype = self$dtype, device = self$device) |>
+        torch_transpose(2, 1)
+      tl = FALSE
+    }
+    tm = torch_fft_fft(tm, norm = "ortho")
     ret = torch_sqrt(tm$real^2 + tm$imag^2)
     return(
       list(
-        data = ret[,,seq_len(ceiling(last(ret$shape) / 2))],
+        data = 
+          if (tl) {
+            ret[,,seq_len(ceiling(last(ret$shape) / 2))]
+          } else {
+            ret[,seq_len(ceiling(last(ret$shape) / 2))]
+          },
         samples = items$samples
       )
     )
@@ -231,10 +251,40 @@ ThreeWindowSelfSupervisedDataSet = dataset(
   }
 )
 
-#SummaryOutcomeActgraphyDataSet = dataset(
-#  name = "SummaryOutcomeActigraphyDataSet",
-#  initialize = function(
-#)
+#' @importFrom purrr map_chr
+#' @export
+SummaryOutcomeActgraphyDataSet = dataset(
+  name = "SummaryOutcomeActigraphyDataSet",
+  initialize = function(y, x) {
+    x_idfu = x$get_sample_data()$fn |>
+      basename() |>
+      gsub("\\.parquet", "", x = _) |>
+      strsplit("_") |>
+      map_chr(~ .x[1]) |>
+      unique()
+    y_idfu = y$idf$eid |>
+      unique()
+    idf_intersect = intersect(x_idfu, y_idfu)
+    self$x_idfs = (x$get_sample_data()$fn |>
+      basename() |>
+      gsub("\\.parquet", "", x = _) |>
+      strsplit("_") |>
+      map_chr(~ .x[1]) %in% idf_intersect) %>% which()
+    self$x = x
+    self$y = y
+    browser()
+  },
+  .getitem = function(index) {
+    index_idf = self$x_idfs[index] 
+    list(
+      x = self$x$.getitem(which(self$x_idfs == index_idf)),
+      y = self$y$.getitem(which(self$y$idf$eid == index_idf))
+    )
+  },
+  .length = function() {
+    length(self$x_idfs)
+  }
+)
 
 OutcomeDataSet = dataset(
   name = "OutcomeDataSet",
@@ -250,6 +300,7 @@ OutcomeActigraphyDataSet = dataset(
     self$spectral_ds = spectral_ds
   },
   .getitem = function(index) {
+    
   },
   .length = function() {
     
