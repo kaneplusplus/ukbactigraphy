@@ -264,21 +264,25 @@ SummaryOutcomeActgraphyDataSet = dataset(
       unique()
     y_idfu = y$idf$eid |>
       unique()
-    idf_intersect = intersect(x_idfu, y_idfu)
+    self$idf_intersect = intersect(x_idfu, y_idfu)
     self$x_idfs = (x$get_sample_data()$fn |>
       basename() |>
       gsub("\\.parquet", "", x = _) |>
       strsplit("_") |>
-      map_chr(~ .x[1]) %in% idf_intersect) %>% which()
+      map_chr(~ .x[1]) %in% self$idf_intersect) %>% which()
+    self$x_int_idfs =  x$get_sample_data()$fn |>
+      basename() |>
+      gsub("\\.parquet", "", x = _) |>
+      strsplit("_") |>
+      map_chr(~ .x[1])
     self$x = x
     self$y = y
-    browser()
   },
   .getitem = function(index) {
-    index_idf = self$x_idfs[index] 
+    y_index = which(self$y$idf$eid == self$x_int_idfs[index])
     list(
-      x = self$x$.getitem(which(self$x_idfs == index_idf)),
-      y = self$y$.getitem(which(self$y$idf$eid == index_idf))
+      x = self$x$.getitem(self$x_idfs[index]),
+      y = self$y$mt[y_index,]
     )
   },
   .length = function() {
