@@ -73,14 +73,24 @@ ParquetDataFileSample = dataset(
       self$num_samples
     )
   },
-  .getitem = function(index) {
+  getitem = function(index) {
     if (index > nrow(self$samples) || index < 1) {
       stop("Index out of bounds")
     }
     pqr = read_parquet(self$samples$fn[index], as_data_frame = FALSE)
     return(
-      pqr[self$samples$start[index]:(self$samples$start[index] + num_rows -1),]
+      list(
+        data = 
+          pqr[
+            self$samples$start[index]:(self$samples$start[index] + num_rows -1),
+          ],
+        samples = self$samples[index,]
+      )
+        
     )
+  },
+  .getitem = function(index) {
+    self$getitem(index)$data
   },
   get_samples = function() {
     self$samples
@@ -101,22 +111,30 @@ ParquetDataFileSample = dataset(
 ParquetDataFileThreeWindowSample = dataset(
   name = "ParquetDataFileThreeWindowSample",
   inherit = ParquetDataFileSample,
-  .getitem = function(index) {
+  getitem = function(index) {
     if (index > nrow(self$samples) || index < 1) {
       stop("Index out of bounds")
     }
-    pqr = super$.getitem(index)
+
+    # Cast it to the super-class type before calling the getitem method.
+    pqrl = super$getitem(index)
+
     start_row = 1
     starts = self$num_rows * c(0, 1, 2) / 3 + start_row
     ends = self$num_rows * c(1, 2, 3) / 3 + start_row - 1
-    return(
-      map(
-        seq_along(starts), 
-        ~ pqr[starts[.x]:ends[.x], c("X", "Y", "Z")]
-      )
-    ) 
+    ret = map(
+      seq_along(starts), 
+      ~ pqrl$data[starts[.x]:ends[.x], c("X", "Y", "Z")]
+    )
+    ss = reduce(map(1:3, ~ pqrl$samples), bind_rows)
+    ss$start = ss$start + starts - 1
+    ss$nr = self$num_rows
+    return(list(data = ret, samples = ss))
 #|>
 #    )
+  },
+  .getitem = function(index) { 
+    self$getitem(index)$data
   },
   .length = function() {
     return(self$num_samples)
@@ -138,16 +156,16 @@ get_spectrum <- function(x) {
 SpectralTensorAdaptor = dataset(
   name = "SpectralTensorAdaptor",
   initialize = function(dsg, device = NULL, dtype = torch_float32()) {
+    self$dsg = dsg # This should be derived from ParquetDataFileSample
     if (!inherits(self$dsg, "ParquetDataFileSample")) {
       stop("dsg must be derived from ParquetDataFileSample")
     }
-    self$dsg = dsg # This should be derived from ParquetDataFileSample
     self$device = device
     self$dtype = dtype
   },
-  .getitem = function(index) {
-    browser()
-    tm = self$dsg$.getitem(index) |>
+  getitem = function(index) {
+    items = self$dsg$getitem(index)
+    tm = items$data |>
       map(
         ~ collect(.x) |>
           as.matrix() |>
@@ -157,7 +175,15 @@ SpectralTensorAdaptor = dataset(
       torch_stack(dim = 1) |>
       torch_fft_fft(norm = "ortho")
     ret = torch_sqrt(tm$real^2 + tm$imag^2)
-    return(ret[,,seq_len(ceiling(last(ret$shape) / 2))])
+    return(
+      list(
+        data = ret[,,seq_len(ceiling(last(ret$shape) / 2))],
+        samples = items$samples
+      )
+    )
+  },
+  .getitem = function(index) {
+    self$getitem(index)$data
   },
   .length = function() {
     return(self$dsg$.length())
@@ -179,14 +205,20 @@ ThreeWindowSelfSupervisedDataSet = dataset(
   initialize = function(dsg) {
     self$dsg = dsg
   },
-  .getitem = function(index) {
-    dsgd = self$dsg$.getitem(index)
+  getitem = function(index) {
+    dsgd = self$dsg$getitem(index)
     return(
       list(
-        x = dsgd[c(1, 3),,],
-        y = dsgd[2,,]
+        data = list(
+          x = dsgd$data[c(1, 3),,],
+          y = dsgd$data[2,,]
+        ),
+        samples = dsgd$samples
       )
     )
+  },
+  .getitem = function(index) {
+    self$getitem(index)$data
   },
   .length = function() {
     return(self$dsg$.length())
@@ -203,3 +235,23 @@ ThreeWindowSelfSupervisedDataSet = dataset(
 #  name = "SummaryOutcomeActigraphyDataSet",
 #  initialize = function(
 #)
+
+OutcomeDataSet = dataset(
+  name = "OutcomeDataSet",
+  initialize = function(outcome) {
+    self$outcome = outcome
+  },
+)
+
+OutcomeActigraphyDataSet = dataset(
+  name = "SummaryActigraphyDataSet",
+  initialize = function(outcome_ds, spectral_ds) {
+    self$outcome = outcome_ds
+    self$spectral_ds = spectral_ds
+  },
+  .getitem = function(index) {
+  },
+  .length = function() {
+    
+  }
+)

@@ -12,6 +12,7 @@ num_rows = 100 * 60 * 60
 
 tf = ParquetDataFileSample(num_rows, training_files, num_train)
 tf$.getitem(1)
+tf$getitem(1)
 
 train_pdf3w = 
   ParquetDataFileThreeWindowSample(num_rows, training_files, num_train)
@@ -21,8 +22,13 @@ train_dl = train_pdf3w |>
   ThreeWindowSelfSupervisedDataSet() |>
   dataloader(batch_size = 1)
 
-test_pdd3w = 
+test_pdf3w = 
   ParquetDataFileThreeWindowSample(num_rows, testing_files, num_train)
+
+train_ta = train_pdf3w |>
+  SpectralTensorAdaptor() |>
+  ThreeWindowSelfSupervisedDataSet()
+train_ta$.getitem(1)
 
 test_dl = test_pdf3w |>
   SpectralTensorAdaptor() |>
