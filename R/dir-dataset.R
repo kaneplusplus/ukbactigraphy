@@ -156,6 +156,77 @@ get_spectrum <- function(x) {
 #' @importFrom dplyr select collect
 #' @importFrom torch torch_tensor torch_sqrt
 #' @export
+SpectralSignatureTensor = dataset(
+  name = "SpectralSignatureTensor",
+  initialize = function(dsg, device = NULL, dtype = torch_float32()) {
+    self$dsg = dsg 
+    self$device = device
+    self$dtype = dtype
+  },
+  getitem = function(index) {
+    items = self$dsg$getitem(index)
+    if (is.list(items$data)) {
+      tm = items$data |>
+        map(
+          ~ select(.x, X:Z) |>
+            collect() |>
+            as.matrix() |>
+            torch_tensor(dtype = self$dtype, device = self$device) |>
+            torch_transpose(2, 1) 
+        ) |>
+        torch_stack(dim = 1)
+      tl = TRUE
+    } else {
+      tm = items$data |>
+        select(X:Z) |>
+        collect() |>
+        as.matrix() |>
+        torch_tensor(dtype = self$dtype, device = self$device) |>
+        torch_transpose(2, 1)
+      tl = FALSE
+    }
+    tm = torch_fft_fft(tm, norm = "ortho")
+    ret = torch_sqrt(tm$real^2 + tm$imag^2)
+    return(
+      list(
+        data = 
+          if (tl) {
+            ret[,,seq_len(ceiling(last(ret$shape) / 2))]
+          } else {
+            ret[,seq_len(ceiling(last(ret$shape) / 2))]
+          },
+        samples = items$samples
+      )
+    )
+  },
+  .getitem = function(index) {
+    if (index < 1 || index > self$dsg$.length()) {
+      stop("Index out of range.")
+    }
+    tm = self$dsg$.getitem(index) |>
+      select(X:Z) |>
+      collect() |>
+      as.matrix() |>
+      torch_tensor(dtype = self$dtype, device = self$device) |>
+      torch_transpose(2, 1) |>
+      torch_fft_fft(norm = "ortho")
+    ret = torch_sqrt(tm$real^2 + tm$imag^2)
+    ret[,seq_len(ceiling(last(ret$shape) / 2))]
+  },
+  .length = function() {
+    return(self$dsg$.length())
+  },
+  get_sample_data = function() {
+    self$dsg$samples
+  },
+  get_num_rows = function() {
+    self$dsg$num_rows
+  }
+)
+#' @importFrom torch dataset
+#' @importFrom dplyr select collect
+#' @importFrom torch torch_tensor torch_sqrt
+#' @export
 SpectralTensorAdaptor = dataset(
   name = "SpectralTensorAdaptor",
   initialize = function(dsg, device = NULL, dtype = torch_float32()) {
@@ -213,6 +284,43 @@ SpectralTensorAdaptor = dataset(
   },
   get_num_rows = function() {
     self$dsg$num_rows
+  }
+)
+
+#' @importFrom arrow read_parquet
+#' @export
+ParquetDayHourSpectralSignature = dataset(
+  name = "ParquetDayHourSpectralSignature",
+  initialize = function(path, clip = 117600, device = NULL, 
+                        dtype = torch_float32()) {
+    self$dsg = read_parquet(path, as_data_frame = FALSE)
+    self$filter_len = 3
+    self$clip = clip
+    self$device = device
+    self$dtype = dtype
+  },
+  .getitem = function(index) {
+    ret = get_day(self$dsg, index) |> 
+      select(time, X:Z) |>
+      mutate(hour = hour(time)) |>
+      group_by(hour) |>
+      group_nest() |>
+      mutate(
+        spec_sig = map(
+          data, 
+          ~ .x |> 
+            select(-time) |>
+            as.matrix() |>
+            torch_tensor(dtype = self$dtype, device = self$device) |>
+            torch_transpose(2, 1) |>
+            torch_fft_fft(norm = "ortho", dim = 2) |>
+            (\(x) torch_sqrt(x$real^2 + x$imag^2)[,1:self$clip])()
+        )
+      ) 
+    torch_stack(ret$spec_sig, dim = 1)
+  },
+  .length = function() {
+    len_full_days(self$dsg)
   }
 )
 

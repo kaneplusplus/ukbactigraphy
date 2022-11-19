@@ -3,6 +3,8 @@ library(torch)
 library(luz)
 
 document()
+device = "cpu" # "mps"
+Sys.setenv(PYTORCH_ENABLE_MPS_FALLBACK = 1)
 
 fns = dir("parquet-subset")
 training_files = file.path("parquet-subset", fns[-1])
@@ -18,7 +20,7 @@ train_pdf3w =
   ParquetDataFileThreeWindowSample(num_rows, training_files, num_train)
 
 train_dl = train_pdf3w |>
-  SpectralTensorAdaptor() |>
+  SpectralTensorAdaptor(device = device) |>
   ThreeWindowSelfSupervisedDataSet() |>
   dataloader(batch_size = 1)
 
@@ -26,12 +28,12 @@ test_pdf3w =
   ParquetDataFileThreeWindowSample(num_rows, testing_files, num_train)
 
 train_ta = train_pdf3w |>
-  SpectralTensorAdaptor() |>
+  SpectralTensorAdaptor(device = device) |>
   ThreeWindowSelfSupervisedDataSet()
 train_ta$.getitem(1)
 
 test_dl = test_pdf3w |>
-  SpectralTensorAdaptor() |>
+  SpectralTensorAdaptor(device = device) |>
   ThreeWindowSelfSupervisedDataSet() |>
   dataloader()
 

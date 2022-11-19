@@ -1,3 +1,31 @@
+#' @importFrom torch nn_sequential torch_flatten nn_linear
+SpectralSignatureReducer = function() {
+  ret = nn_module(
+    "SpectralSignatureReducer",
+    initialize = function(l2_width = 1000, l3_width = 100) {
+      self$initialized = FALSE
+      self$l2_width = l2_width
+      self$l3_width = l3_width
+    },
+    forward = function(x) {
+      browser()
+      if (!self$initialized) {
+        ne = x$shape[3]
+        self$nn1 = nn_sequential(
+          nn_linear(ne, self$l2_width),
+          nn_linear(self$l2_width, self$l3_width)
+        )
+        self$nn2 = nn_sequential(
+          nn_linear(self$l3_width * 24 * 3, 100)
+        )
+      }
+      self$nn1(x) |>
+        torch_flatten() |>
+        self$nn2()
+    }
+  )
+  ret
+}
 
 #' @importFrom torch nn_sequential
 #' @export
