@@ -8,7 +8,6 @@ SpectralSignatureReducer = function() {
       self$l3_width = l3_width
     },
     forward = function(x) {
-      browser()
       if (!self$initialized) {
         ne = x$shape[3]
         self$nn1 = nn_sequential(

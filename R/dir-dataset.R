@@ -1,10 +1,9 @@
-#' @importFrom arrow read_parquet
 #' @importFrom torch dataset
 #' @importFrom tools file_path_as_absolute
 #' @importFrom dplyr collect
 #' @export
-ParquetDataDirSmall = dataset(
-  name = "ParquetDataDirSmall",
+DataDirSmall = dataset(
+  name = "DataDirSmall",
   initialize = function(dirname, expected_rows = NULL, verbose = TRUE) {
     self$dirname = file_path_as_absolute(dirname)
     self$expected_rows = expected_rows
@@ -50,8 +49,8 @@ sample_file_name_and_offset = function(sfc, num_samples) {
   ret
 }
 
-ParquetDataFileSample = dataset(
-  name = "ParquetDataFileSample",
+DataFileSample = dataset(
+  name = "DataFileSample",
   initialize = function(num_rows, file_names, num_samples = 0, verbose = TRUE) {
     self$num_rows = num_rows
     self$file_names = map_chr(file_names, file_path_as_absolute)
@@ -111,9 +110,9 @@ ParquetDataFileSample = dataset(
 #' @importFrom furrr future_map_dbl
 #' @export
 #parquet_dir_dataset = dataset(
-ParquetDataFileThreeWindowSample = dataset(
-  name = "ParquetDataFileThreeWindowSample",
-  inherit = ParquetDataFileSample,
+DataFileThreeWindowSample = dataset(
+  name = "DataFileThreeWindowSample",
+  inherit = DataFileSample,
   getitem = function(index) {
     if (index > nrow(self$samples) || index < 1) {
       stop("Index out of bounds")
@@ -230,9 +229,9 @@ SpectralSignatureTensor = dataset(
 SpectralTensorAdaptor = dataset(
   name = "SpectralTensorAdaptor",
   initialize = function(dsg, device = NULL, dtype = torch_float32()) {
-    self$dsg = dsg # This should be derived from ParquetDataFileSample
-    if (!inherits(self$dsg, "ParquetDataFileSample")) {
-      stop("dsg must be derived from ParquetDataFileSample")
+    self$dsg = dsg # This should be derived from DataFileSample
+    if (!inherits(self$dsg, "DataFileSample")) {
+      stop("dsg must be derived from DataFileSample")
     }
     self$device = device
     self$dtype = dtype
@@ -287,13 +286,50 @@ SpectralTensorAdaptor = dataset(
   }
 )
 
+#' @importFrom furrr future_map future_map_dbl furrr_options
+DayHourSpectralSignatureDataSet = dataset(
+  name = "DayHourSpectralSignatureCollection",
+  initialize = function(dsg, device = NULL, clip = 117600,
+                        dtype = torch_float32()) {
+    self$dsg = dsg 
+    samples = dsg |> 
+      select(info) |>
+      distinct() |>
+      collect()
+    self$spec_sigs = 
+      map(
+        samples$info, 
+        ~ dsg |> 
+          filter(info == .x) |> 
+          DayHourSpectralSignature(device = device, clip = clip, dtype = dtype)
+      )
+    self$lengths = future_map_dbl(self$spec_sigs, ~ .x$.length())
+    # Create a lookup table mapping index to spectral signature item.
+    self$lookup = 
+      map_dfr(
+        seq_along(self$lengths), 
+        ~ tibble(spec_sig = rep(.x, self$lengths[.x]), 
+                 item = seq_len(self$lengths[.x]))
+      )
+
+  },
+  .getitem = function(index) {
+    ss = self$lookup[index,]$spec_sig
+    item = self$lookup[index,]$item
+    return(self$spec_sigs[[ss]]$.getitem(item))
+  },
+  .length = function() {
+    return(nrow(self$lookup))
+  }
+)
+
 #' @importFrom arrow read_parquet
 #' @export
-ParquetDayHourSpectralSignature = dataset(
-  name = "ParquetDayHourSpectralSignature",
-  initialize = function(path, clip = 117600, device = NULL, 
+DayHourSpectralSignature = dataset(
+  name = "DayHourSpectralSignature",
+  initialize = function(dsg, device = NULL, clip = 117600,
                         dtype = torch_float32()) {
-    self$dsg = read_parquet(path, as_data_frame = FALSE)
+    self$dsg = dsg
     self$filter_len = 3
     self$clip = clip
     self$device = device

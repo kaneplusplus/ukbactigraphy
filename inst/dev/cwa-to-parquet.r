@@ -24,6 +24,6 @@ info = basename(args[1]) |>
 
 x = read_cwa(args[1])$data
 x$user = user[1]
-x$into = info[1]
+x$info = info[1]
 
 write_parquet(x, args[2])
