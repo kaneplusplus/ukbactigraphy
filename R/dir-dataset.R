@@ -364,7 +364,7 @@ DayHourSpectralSignature = dataset(
 #' @importFrom torch torch_cat
 Actigraphy24DataSet = dataset(
   name = "Actigraphy24DataSet",
-  initialize = function(y, x, user, ss, ss_index, data, dhss_reducer,
+  initialize = function(y, x, user, ss, ss_index, data, 
                         dtype = NULL, device = NULL, requires_grad = FALSE,
                         pin_memory = FALSE) {
     self$y = y
@@ -373,7 +373,6 @@ Actigraphy24DataSet = dataset(
     self$ss = ss
     self$ss_index = ss_index
     self$data = data
-    self$dhss_reducer = dhss_reducer()
     self$dtype = dtype
     self$device = device
     self$requires_grad = requires_grad
@@ -395,9 +394,6 @@ Actigraphy24DataSet = dataset(
       pin_memory = self$pin_memory
     )$contr_level_map 
   },
-  get_reducer = function() {
-    self$dhss_reducer
-  },
   .getitem = function(index) {
     y = model_tensor(
       self$data[index, c(self$y, self$user)], 
@@ -417,12 +413,11 @@ Actigraphy24DataSet = dataset(
       pin_memory = self$pin_memory
     ) |> to_tensor()
     x = x$reshape(prod(x$shape))
-    act = self$dhss_reducer(
+    act = 
       self$data[[self$ss]][[index]]$.getitem(self$data[[self$ss_index]][index])
-    )
     return(
       list(
-        x = torch_cat(list(x, act), dim = 1),
+        x = list(demo = x, act = act),
         y = y
       )
     )
