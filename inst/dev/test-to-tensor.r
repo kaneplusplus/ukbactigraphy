@@ -13,3 +13,8 @@ mt = x |>
 mt2 = x |>
   model_tensor(index = "eid") |>
   to_tensor(x$eid[1:10])
+
+mt = x |>
+  model_tensor(index = "eid") |>
+  to_tibble()
+

@@ -47,20 +47,49 @@ model_tensor =
   contr_arg = map(setdiff(fcn, names(contrasts.arg)), ~ contr.onehot)
   names(contr_arg) = setdiff(fcn, names(contrasts.arg))
   contr_arg = c(contrasts.arg, contr_arg)
-  mt = model.matrix(f, d, contrasts.arg = contr_arg)
-  for (i in which(map_lgl(contr_arg, is.character))) {
-    contr_arg[[i]] = eval(parse(text = contr_arg[[i]]))
+
+  if (any(map_lgl(contr_arg, is.character))) {
+    stop("You must specify the contrast function")
   }
-  contr_map = contr_arg
-  
-  cnm = colnames(mt)
+
+  contrasts = map(names(contr_arg), ~ contr_arg[[.x]](levels(d[[.x]])))
+  names(contrasts) = names(contr_arg)
+  mt = map(
+    seq_along(d), 
+    ~ {
+      if (is.numeric(d[[.x]])) {
+        matrix(d[[.x]], ncol = 1, dimnames = list(NULL, names(d)[.x]))
+      } else if (is.factor(d[[.x]])) {
+        contr = contrasts[[(names(d)[.x])]]
+        r = contr[as.character(d[[.x]]),]
+        rownames(r) = NULL
+        colnames(r) = paste0(names(d)[.x], colnames(r))
+        r
+      } else {
+        warning("Unsupported column type")
+        NULL
+      }
+    }
+  ) |> reduce(cbind)
+
+  contr_level_map = map_dfr(
+    seq_along(d),
+    ~ {
+      if (is.numeric(d[[.x]])) {
+        tibble(var = names(d)[[.x]], level = NA, name = NA)
+      } else if (is.factor(d[[.x]])) {
+        tibble(var = names(d)[[.x]], level = levels(d[[.x]]), 
+               name = paste0(var, level))
+      } else {
+        stop("Unsupported column type.")
+      }
+    }
+  )
 
   ret =  list(
     mt = torch_tensor(mt),
-    contr_map = contr_map, 
-    d_col_names = cnd,
-    m_col_names = cnm,
-    factor_cols = fcn,
+    contrasts = contrasts,
+    contr_level_map = contr_level_map,
     idf = idf
   )
   class(ret) = c("model_tensor")
