@@ -360,6 +360,78 @@ DayHourSpectralSignature = dataset(
   }
 )
 
+
+#' @importFrom torch torch_cat
+Actigraphy24DataSet = dataset(
+  name = "Actigraphy24DataSet",
+  initialize = function(y, x, user, ss, ss_index, data, dhss_reducer,
+                        dtype = NULL, device = NULL, requires_grad = FALSE,
+                        pin_memory = FALSE) {
+    self$y = y
+    self$x = x
+    self$user = user
+    self$ss = ss
+    self$ss_index = ss_index
+    self$data = data
+    self$dhss_reducer = dhss_reducer()
+    self$dtype = dtype
+    self$device = device
+    self$requires_grad = requires_grad
+    self$pin_memory = pin_memory
+    self$x_contr_map = model_tensor(
+        self$data[1, c(self$x, self$user)],
+        index = self$user,
+        dtype = self$dtype,
+        device = self$device,
+        requires_grad = self$requires_grad,
+        pin_memory = self$pin_memory
+      )$contr_level_map
+    self$y_contr_map = model_tensor(
+      self$data[1, c(self$y, self$user)], 
+      index = self$user,
+      dtype = self$dtype,
+      device = self$device,
+      requires_grad = self$requires_grad,
+      pin_memory = self$pin_memory
+    )$contr_level_map 
+  },
+  get_reducer = function() {
+    self$dhss_reducer
+  },
+  .getitem = function(index) {
+    y = model_tensor(
+      self$data[index, c(self$y, self$user)], 
+      index = self$user,
+      dtype = self$dtype,
+      device = self$device,
+      requires_grad = self$requires_grad,
+      pin_memory = self$pin_memory
+    ) |> to_tensor()
+    y = y$reshape(prod(y$shape))
+    x = model_tensor(
+      self$data[index, c(self$x, self$user)], 
+      index = self$user,
+      dtype = self$dtype,
+      device = self$device,
+      requires_grad = self$requires_grad,
+      pin_memory = self$pin_memory
+    ) |> to_tensor()
+    x = x$reshape(prod(x$shape))
+    act = self$dhss_reducer(
+      self$data[[self$ss]][[index]]$.getitem(self$data[[self$ss_index]][index])
+    )
+    return(
+      list(
+        x = torch_cat(list(x, act), dim = 1),
+        y = y
+      )
+    )
+  },
+  .length = function() {
+    return(nrow(self$data))
+  }
+)
+
 #' @importFrom torch dataset
 #' @importFrom dplyr select collect
 #' @importFrom torch torch_stack

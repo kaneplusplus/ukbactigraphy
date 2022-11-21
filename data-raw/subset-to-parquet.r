@@ -2,13 +2,15 @@ library(arrow)
 library(tibble)
 library(read.cwa)
 library(dplyr)
+library(purrr)
 
 x = tibble(
   fn = dir("cwa-subset"),
   ofn = gsub(".cwa.bz2", ".parquet", fn),
-  user = (gsub(".cwa.bz2", "", fn) |> 
-    strsplit("_") |> 
-    unlist())[1],
+  user = map_chr(
+    fn,
+    ~ (gsub(".cwa.bz2", "", .x) |> strsplit("_") |> unlist())[1]
+  ),
   info = gsub(".cwa.bz2", "", fn)
 )
 

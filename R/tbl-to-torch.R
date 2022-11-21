@@ -61,7 +61,7 @@ model_tensor =
         matrix(d[[.x]], ncol = 1, dimnames = list(NULL, names(d)[.x]))
       } else if (is.factor(d[[.x]])) {
         contr = contrasts[[(names(d)[.x])]]
-        r = contr[as.character(d[[.x]]),]
+        r = contr[as.character(d[[.x]]), ,drop = FALSE]
         rownames(r) = NULL
         colnames(r) = paste0(names(d)[.x], colnames(r))
         r
@@ -87,7 +87,13 @@ model_tensor =
   )
 
   ret =  list(
-    mt = torch_tensor(mt),
+    mt = torch_tensor(
+      mt, 
+      device = device,
+      dtype = dtype, 
+      requires_grad = requires_grad,
+      pin_memory = pin_memory
+    ),
     contrasts = contrasts,
     contr_level_map = contr_level_map,
     idf = idf
