@@ -1,3 +1,5 @@
+
+#' @importFrom stats contr.treatment
 #' @export
 contr.onehot = function(x, sparse = FALSE) {
   contr.treatment(x, contrasts = FALSE, sparse = sparse)
@@ -7,6 +9,8 @@ contr.onehot = function(x, sparse = FALSE) {
 #' @param f a formula.
 #' @importFrom torch torch_tensor
 #' @importFrom tibble as_tibble
+#' @importFrom stats model.frame 
+#' @importFrom purrr map_lgl negate map
 #' @export
 model_tensor = 
   function(

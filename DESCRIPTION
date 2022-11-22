@@ -13,14 +13,17 @@ Authors@R: c(
          role = c("aut")))
 Description: What the package does (one paragraph).
 Depends:
+  R (>= 4.2)
+Imports:
   arrow,
   dplyr,
   tools,
   torch,
   purrr,
-  luz,
-  furrr
+  furrr,
+  lubridate,
+  tibble
 License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.2

@@ -12,12 +12,12 @@ num_train = 10000
 testing_files = file.path("parquet-subset", fns[1])
 num_rows = 100 * 60 * 60
 
-tf = ParquetDataFileSample(num_rows, training_files, num_train)
+tf = DataFileSample(num_rows, training_files, num_train)
 tf$.getitem(1)
 tf$getitem(1)
 
 train_pdf3w = 
-  ParquetDataFileThreeWindowSample(num_rows, training_files, num_train)
+  DataFileThreeWindowSample(num_rows, training_files, num_train)
 
 train_dl = train_pdf3w |>
   SpectralTensorAdaptor(device = device) |>
@@ -25,7 +25,7 @@ train_dl = train_pdf3w |>
   dataloader(batch_size = 1)
 
 test_pdf3w = 
-  ParquetDataFileThreeWindowSample(num_rows, testing_files, num_train)
+  DataFileThreeWindowSample(num_rows, testing_files, num_train)
 
 train_ta = train_pdf3w |>
   SpectralTensorAdaptor(device = device) |>

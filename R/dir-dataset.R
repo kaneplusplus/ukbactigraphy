@@ -106,7 +106,7 @@ DataFileSample = dataset(
 #' @importFrom torch dataset
 #' @importFrom tools file_path_as_absolute
 #' @importFrom dplyr collect
-#' @importFrom purrr map_dfr map_chr map_dbl
+#' @importFrom purrr map_dfr map_chr map_dbl reduce
 #' @importFrom furrr future_map_dbl
 #' @export
 #parquet_dir_dataset = dataset(
@@ -362,6 +362,7 @@ DayHourSpectralSignature = dataset(
 
 
 #' @importFrom torch torch_cat
+#' @importFrom arrow open_dataset
 Actigraphy24DataSet = dataset(
   name = "Actigraphy24DataSet",
   initialize = function(y, x, user, ss, ss_index, data, 
@@ -413,8 +414,11 @@ Actigraphy24DataSet = dataset(
       pin_memory = self$pin_memory
     ) |> to_tensor()
     x = x$reshape(prod(x$shape))
-    act = 
-      self$data[[self$ss]][[index]]$.getitem(self$data[[self$ss_index]][index])
+    act = DayHourSpectralSignature(
+      open_dataset(self$data[[self$ss]][index])
+    )$.getitem(self$data[[self$ss_index]][index])
+#    act = 
+#      self$data[[self$ss]][[index]]$.getitem(self$data[[self$ss_index]][index])
     return(
       list(
         x = list(demo = x, act = act),
