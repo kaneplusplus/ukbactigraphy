@@ -15,9 +15,17 @@ SpectralSignatureReducer <- nn_module(
     )
   },
   forward = function(x) {
-    self$nn1(x) |>
-      torch_flatten() |>
-      self$nn2()
+    if (length(x$shape) == 3) {
+      # It's a singleton.
+      self$nn1(x) |>
+        torch_flatten() |>
+        self$nn2()
+    } else if (length(x$shape == 4)) {
+      # It's batched.
+      self$nn1(x) |>
+        torch_flatten(start_dim = 2) |>
+        self$nn2()
+    }
   }
 )
 
@@ -54,16 +62,40 @@ DemoActigraphyModel <-  nn_module(
     )
   },
   forward = function(x) {
-    xc = torch_cat(list(x$demo$flatten(), self$act_reducer(x$act)), dim = 1)
+    if (length(x$demo$shape) == 2) {
+      # It's a singleton
+      xc = torch_cat(list(x$demo$flatten(), self$act_reducer(x$act)), dim = 1)
+    } else if (length(x$demo$shape) == 3) {
+      xc = torch_cat(
+        list(
+          torch_flatten(x$demo, start_dim = 2),
+          torch_flatten(self$act_reducer(x$act), start_dim = 2)   
+        ),
+        dim = 2
+      )
+    } else {
+      stop("Unsupported input shape.")
+    }
     xcl1 = xc |> 
       self$cat_layer_1()
-    torch_cat(
-      map(
-        seq_along(self$outputs),
-        ~ self$outputs[[.x]](xcl1)
-      ),
-      dim = 1
-    )
+
+    if (length(x$demo$shape) == 2) {
+      torch_cat(
+        map(
+          seq_along(self$outputs),
+          ~ self$outputs[[.x]](xcl1)
+        ),
+        dim = 1
+      )
+    } else {
+      torch_cat(
+        map(
+          seq_along(self$outputs),
+          ~ self$outputs[[.x]](xcl1)
+        ),
+        dim = 2
+      )
+    }
   }
 )
 

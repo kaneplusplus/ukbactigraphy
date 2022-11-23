@@ -190,9 +190,10 @@ SpectralSignatureTensor = dataset(
       list(
         data = 
           if (tl) {
-            ret[,,seq_len(ceiling(last(ret$shape) / 2))]
+            # TODO: The extra transfer to device isn't needed on Linux.
+            ret[,,seq_len(ceiling(last(ret$shape) / 2))]$to(device = device)
           } else {
-            ret[,seq_len(ceiling(last(ret$shape) / 2))]
+            ret[,seq_len(ceiling(last(ret$shape) / 2))]$to(device = device)
           },
         samples = items$samples
       )
@@ -404,7 +405,6 @@ Actigraphy24DataSet = dataset(
       requires_grad = self$requires_grad,
       pin_memory = self$pin_memory
     ) |> to_tensor()
-    y = y$reshape(prod(y$shape))
     x = model_tensor(
       self$data[index, c(self$x, self$user)], 
       index = self$user,
@@ -413,12 +413,10 @@ Actigraphy24DataSet = dataset(
       requires_grad = self$requires_grad,
       pin_memory = self$pin_memory
     ) |> to_tensor()
-    x = x$reshape(prod(x$shape))
     act = DayHourSpectralSignature(
       open_dataset(self$data[[self$ss]][index])
     )$.getitem(self$data[[self$ss_index]][index])
-#    act = 
-#      self$data[[self$ss]][[index]]$.getitem(self$data[[self$ss_index]][index])
+    gc()
     return(
       list(
         x = list(demo = x, act = act),
