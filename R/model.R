@@ -47,13 +47,11 @@ DemoActigraphyModel <-  nn_module(
           xl = ycm |> filter(var == .x)
           if (nrow(xl) == 1) {
             nn_sequential(
-              nn_linear(self$x_width, 1),
-              nn_relu()
+              nn_linear(self$x_width, 1)
             )
           } else {
             nn_sequential(
               nn_linear(self$x_width, nrow(xl)),
-              nn_relu(),
               nn_softmax(1),
             )
           }

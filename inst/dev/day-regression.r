@@ -15,12 +15,14 @@ plan(multicore, workers = num_workers)
 registerDoFuture()
 document()
 
+make_data = FALSE
+find_lr = TRUE
+train_model = TRUE
 device = "mps"
 
 #Sys.setenv(PYTORCH_ENABLE_MPS_FALLBACK = 1)
 options(tz="UTC")
 
-make_data = FALSE
 
 if (make_data) {
   data_dir = "parquet-subset"
@@ -154,41 +156,71 @@ my_loss = function(input, target) {
   nnf_mse_loss(input, target)
 }
 
-tm = DemoActigraphyModel |>
-  setup(
-    loss = my_loss,
-    optimizer = optim_adam,
-  ) |>
-  set_hparams(
-    y_contr_map = ads_train$y_contr_map,
-    act_reducer = SpectralSignatureReducer(117600),
-    x_width = 105
-  ) |> 
-  set_opt_hparams() |>
-  fit(
-    data = dataloader(
-      ads_train,
-      batch_size = 32,
-      shuffle = TRUE,
-      num_workers = num_workers, 
-      worker_packages = c("ukbactigraphy", "tibble", "dplyr")
-    ),
-    epochs = 10, 
-    valid_data = dataloader(
-      ads_test, 
-      num_workers = num_workers,
-      worker_packages = c("ukbactigraphy", "tibble", "dplyr"),
-    ),
-    callbacks = list(
-      luz_callback_keep_best_model(),
-      luz_callback_model_checkpoint(
-        path = "checkpoint/demo-actigraphy-model-{epoch:03d}.pt",
-        save_best_only = TRUE
-      ),
-      luz_callback_csv_logger("logging/training-log.csv")
-    )
-  )  
 
-input = map(ads_train$.getitem(1)$x, ~ .x$to(device = device))
-tm$model(input)
+if (find_lr) {
+  # see https://mlverse.github.io/luz/reference/lr_finder.html to find the
+  # learning rate
+
+  model = DemoActigraphyModel |>
+    setup(
+      loss = my_loss,
+      optimizer = optim_adam,
+    ) |>
+    set_hparams(
+      y_contr_map = ads_train$y_contr_map,
+      act_reducer = SpectralSignatureReducer(117600),
+      x_width = 105
+    ) 
+
+  dl = dataloader(
+        ads_train,
+        batch_size = 32,
+        shuffle = TRUE,
+        num_workers = num_workers,
+        worker_packages = c("ukbactigraphy", "tibble", "dplyr")
+      )
+
+  records <- lr_finder(model, dl, verbose = TRUE)
+  plot(records)
+}
+
+if (train_model) {
+  tm = DemoActigraphyModel |>
+    setup(
+      loss = my_loss,
+      optimizer = optim_adam,
+    ) |>
+    set_hparams(
+      y_contr_map = ads_train$y_contr_map,
+      act_reducer = SpectralSignatureReducer(117600),
+      x_width = 105
+    ) |> 
+    set_opt_hparams(lr = 1e-5) |>
+    fit(
+      data = dataloader(
+        ads_train,
+        batch_size = 32,
+        shuffle = TRUE,
+        num_workers = num_workers, 
+        worker_packages = c("ukbactigraphy", "tibble", "dplyr")
+      ),
+      epochs = 10, 
+      valid_data = dataloader(
+        ads_test, 
+        num_workers = num_workers,
+        worker_packages = c("ukbactigraphy", "tibble", "dplyr"),
+      ),
+      callbacks = list(
+        luz_callback_keep_best_model(),
+        luz_callback_model_checkpoint(
+          path = "checkpoint/demo-actigraphy-model-{epoch:03d}.pt",
+          save_best_only = TRUE
+        ),
+        luz_callback_csv_logger("logging/training-log.csv")
+      )
+    )  
+}
+
+#input = map(ads_train$.getitem(1)$x, ~ .x$to(device = device))
+#tm$model(input)
 
