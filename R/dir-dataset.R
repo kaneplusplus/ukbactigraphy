@@ -153,7 +153,7 @@ get_spectrum <- function(x) {
 
 #' @importFrom torch dataset
 #' @importFrom dplyr select collect
-#' @importFrom torch torch_tensor torch_sqrt
+#' @importFrom torch torch_tensor torch_sqrt torch_transpose
 #' @export
 SpectralSignatureTensor = dataset(
   name = "SpectralSignatureTensor",

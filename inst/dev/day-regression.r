@@ -110,7 +110,7 @@ norm = tt |>
   group_by(name) |>
   summarize(min = min(value), max = max(value))
 
-saveRDS(tt, "normalization-table.rds")
+saveRDS(norm, "normalization-table.rds")
 
 tt = tt |>
   mutate_at(
@@ -204,7 +204,7 @@ if (train_model) {
         num_workers = num_workers, 
         worker_packages = c("ukbactigraphy", "tibble", "dplyr")
       ),
-      epochs = 10, 
+      epochs = 1, 
       valid_data = dataloader(
         ads_test, 
         num_workers = num_workers,
