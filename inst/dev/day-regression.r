@@ -16,7 +16,7 @@ registerDoFuture()
 document()
 
 make_data = FALSE
-find_lr = TRUE
+find_lr = FALSE
 train_model = TRUE
 device = "mps"
 
@@ -135,7 +135,7 @@ ads_train = Actigraphy24DataSet(
   user = "user",
   ss = "afp",
   ss_index = "afp_index",
-  data = train,
+  data = train[1:2,],
   device = device
 )
 
@@ -145,7 +145,7 @@ ads_test = Actigraphy24DataSet(
   user = "user",
   ss = "afp",
   ss_index = "afp_index",
-  data = test,
+  data = test[1:2,],
   device = device
 )
 
@@ -174,7 +174,7 @@ if (find_lr) {
 
   dl = dataloader(
         ads_train,
-        batch_size = 32,
+        batch_size = 2,
         shuffle = TRUE,
         num_workers = num_workers,
         worker_packages = c("ukbactigraphy", "tibble", "dplyr")
@@ -195,11 +195,11 @@ if (train_model) {
       act_reducer = SpectralSignatureReducer(117600),
       x_width = 105
     ) |> 
-    set_opt_hparams(lr = 1e-5) |>
+    set_opt_hparams(lr = 1e-10) |>
     fit(
       data = dataloader(
         ads_train,
-        batch_size = 32,
+        batch_size = 2,
         shuffle = TRUE,
         num_workers = num_workers, 
         worker_packages = c("ukbactigraphy", "tibble", "dplyr")

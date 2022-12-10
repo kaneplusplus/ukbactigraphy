@@ -33,7 +33,8 @@ SpectralSignatureReducer <- nn_module(
 #' @export
 DemoActigraphyModel <-  nn_module(
   "DemoActigraphyModel",
-  initialize = function(y_contr_map, act_reducer, x_width) {
+  initialize = function(y_contr_map, act_reducer, x_width, 
+                        parent_env = parent.frame()) {
     self$initialized <- FALSE
     self$y_contr_map <- y_contr_map
     self$act_reducer <- act_reducer

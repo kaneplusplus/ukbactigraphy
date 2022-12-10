@@ -364,6 +364,7 @@ DayHourSpectralSignature = dataset(
 
 #' @importFrom torch torch_cat
 #' @importFrom arrow open_dataset
+#' @export
 Actigraphy24DataSet = dataset(
   name = "Actigraphy24DataSet",
   initialize = function(y, x, user, ss, ss_index, data, 
