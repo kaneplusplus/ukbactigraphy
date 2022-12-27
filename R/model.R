@@ -1,4 +1,5 @@
 #' @importFrom torch nn_sequential torch_flatten nn_linear
+#' @export
 SpectralSignatureReducer <- nn_module(
   "SpectralSignatureReducer",
   initialize = function(width, l2_width = 1000, l3_width = 100) {
