@@ -148,7 +148,9 @@ DataFileThreeWindowSample = dataset(
 get_spectrum <- function(x) {
   ret = torch_fft_fft(x, dim = 1, norm = "ortho") 
   ret = torch_sqrt(ret$real^2 + ret$imag^2)
-  return(ret[seq_len(ceiling(ret$shape[1] / 2)),])
+  ret = ret[seq_len(ceiling(ret$shape[1] / 2)),]
+  gc()
+  return(ret)
 }
 
 #' @importFrom torch dataset
@@ -186,7 +188,7 @@ SpectralSignatureTensor = dataset(
     }
     tm = torch_fft_fft(tm, norm = "ortho")
     ret = torch_sqrt(tm$real^2 + tm$imag^2)
-    return(
+    ret = 
       list(
         data = 
           if (tl) {
@@ -197,7 +199,8 @@ SpectralSignatureTensor = dataset(
           },
         samples = items$samples
       )
-    )
+    gc()
+    return(ret)
   },
   .getitem = function(index) {
     if (index < 1 || index > self$dsg$.length()) {
@@ -211,7 +214,9 @@ SpectralSignatureTensor = dataset(
       torch_transpose(2, 1) |>
       torch_fft_fft(norm = "ortho")
     ret = torch_sqrt(tm$real^2 + tm$imag^2)
-    ret[,seq_len(ceiling(last(ret$shape) / 2))]
+    ret = ret[,seq_len(ceiling(last(ret$shape) / 2))]
+    gc()
+    return(ret)
   },
   .length = function() {
     return(self$dsg$.length())
@@ -261,7 +266,7 @@ SpectralTensorAdaptor = dataset(
     }
     tm = torch_fft_fft(tm, norm = "ortho")
     ret = torch_sqrt(tm$real^2 + tm$imag^2)
-    return(
+    ret = 
       list(
         data = 
           if (tl) {
@@ -271,7 +276,7 @@ SpectralTensorAdaptor = dataset(
           },
         samples = items$samples
       )
-    )
+    return(ret)
   },
   .getitem = function(index) {
     self$getitem(index)$data
