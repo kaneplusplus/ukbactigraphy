@@ -5,6 +5,7 @@ contr.onehot = function(x, sparse = FALSE) {
   contr.treatment(x, contrasts = FALSE, sparse = sparse)
 }
 
+#' @title Create a Model Tensor for Regression
 #' @param d an object inheriting from type data.frame.
 #' @param f a formula.
 #' @importFrom torch torch_tensor
