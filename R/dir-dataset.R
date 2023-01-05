@@ -368,9 +368,8 @@ DayHourSpectralSignature = dataset(
 
 
 #' @importFrom torch torch_cat
-#' @importFrom arrow open_dataset
 #' @export
-Actigraphy24DataSet = dataset(
+Demo24DataSet = dataset(
   name = "Actigraphy24DataSet",
   initialize = function(y, x, user, ss, ss_index, data, 
                         dtype = NULL, device = NULL, requires_grad = FALSE,
@@ -419,16 +418,97 @@ Actigraphy24DataSet = dataset(
       requires_grad = self$requires_grad,
       pin_memory = self$pin_memory
     ) |> to_tensor()
+    return(
+      list(
+        x = list(demo = x),
+        y = y
+      )
+    )
+  },
+  .length = function() {
+    return(nrow(self$data))
+  }
+)
+
+#' @importFrom torch torch_cat
+#' @importFrom arrow open_dataset
+#' @export
+Actigraphy24DataSet = dataset(
+  name = "Actigraphy24DataSet",
+  initialize = function(y, x, user, ss, ss_index, data, 
+                        dtype = NULL, device = NULL, requires_grad = FALSE,
+                        pin_memory = FALSE) {
+    self$y = y
+    self$x = x
+    self$user = user
+    self$ss = ss
+    self$ss_index = ss_index
+    self$data = data
+    self$dtype = dtype
+    self$device = device
+    self$requires_grad = requires_grad
+    self$pin_memory = pin_memory
+    if (!is.null(x)) {
+      self$x_contr_map = model_tensor(
+          self$data[1, c(self$x, self$user)],
+          index = self$user,
+          dtype = self$dtype,
+          device = self$device,
+          requires_grad = self$requires_grad,
+          pin_memory = self$pin_memory
+        )$contr_level_map
+    } else {
+      self$x_contr_map = NULL
+    }
+    self$y_contr_map = model_tensor(
+      self$data[1, c(self$y, self$user)], 
+      index = self$user,
+      dtype = self$dtype,
+      device = self$device,
+      requires_grad = self$requires_grad,
+      pin_memory = self$pin_memory
+    )$contr_level_map 
+  },
+  .getitem = function(index) {
+    y = model_tensor(
+      self$data[index, c(self$y, self$user)], 
+      index = self$user,
+      dtype = self$dtype,
+      device = self$device,
+      requires_grad = self$requires_grad,
+      pin_memory = self$pin_memory
+    ) |> to_tensor()
+    if (!is.null(self$x_contr_map)) {
+      x = model_tensor(
+        self$data[index, c(self$x, self$user)], 
+        index = self$user,
+        dtype = self$dtype,
+        device = self$device,
+        requires_grad = self$requires_grad,
+        pin_memory = self$pin_memory
+      ) |> to_tensor()
+    } else {
+      x = NULL
+    }
     act = DayHourSpectralSignature(
       open_dataset(self$data[[self$ss]][index])
     )$.getitem(self$data[[self$ss_index]][index])
     gc()
-    return(
-      list(
-        x = list(demo = x, act = act),
-        y = y
+    if (is.null(x)) {
+      return(
+        list(
+          x = list(act = act),
+          y = y
+        )
       )
-    )
+    } else {
+      return(
+        list(
+          x = list(demo = x, act = act),
+          y = y
+        )
+      )
+    }
   },
   .length = function() {
     return(nrow(self$data))

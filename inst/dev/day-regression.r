@@ -195,7 +195,8 @@ if (train_model) {
       act_reducer = SpectralSignatureReducer(117600),
       x_width = 105
     ) |> 
-    set_opt_hparams(lr = 1e-10) |>
+    set_opt_hparams(lr = 1e-10)
+  fm = tm |>
     fit(
       data = dataloader(
         ads_train,

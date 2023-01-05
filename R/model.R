@@ -30,6 +30,12 @@ SpectralSignatureReducer <- nn_module(
   }
 )
 
+#' @importFrom torch torch_tensor torch_float32
+#' @export
+null_act_reducer = function(x, dtype = torch_float32()) {
+  torch_tensor(c(), dtype = dtype)
+}
+
 #' @importFrom torch nn_sequential nn_module torch_cat
 #' @export
 DemoActigraphyModel <-  nn_module(
@@ -49,10 +55,12 @@ DemoActigraphyModel <-  nn_module(
           xl = ycm |> filter(var == .x)
           if (nrow(xl) == 1) {
             nn_sequential(
+              nn_linear(self$x_width, self$x_width),
               nn_linear(self$x_width, 1)
             )
           } else {
             nn_sequential(
+              nn_linear(self$x_width, self$x_width),
               nn_linear(self$x_width, nrow(xl)),
               nn_softmax(1),
             )
@@ -62,24 +70,39 @@ DemoActigraphyModel <-  nn_module(
     )
   },
   forward = function(x) {
-    if (length(x$demo$shape) == 2) {
-      # It's a singleton
-      xc = torch_cat(list(x$demo$flatten(), self$act_reducer(x$act)), dim = 1)
-    } else if (length(x$demo$shape) == 3) {
-      xc = torch_cat(
-        list(
-          torch_flatten(x$demo, start_dim = 2),
-          torch_flatten(self$act_reducer(x$act), start_dim = 2)   
-        ),
-        dim = 2
-      )
+    shape_lens = map_dbl(x, ~ length(.x$shape))
+    is_singleton = 
+      reduce(na.omit(c(shape_lens['act'] == 3, shape_lens['demo'] ==2)), `||`)
+    if ("demo" %in% names(x)) {
+      if (length(x$demo$shape) == 2) {
+        # It's a singleton
+        xc = torch_cat(list(x$demo$flatten(), self$act_reducer(x$act)), dim = 1)
+      } else if (length(x$demo$shape) == 3) {
+        act_flatten = self$act_reducer(x$act)
+        if (length(act_flatten$shape) > 1) {
+          act_flatten = torch_flatten(act_flatten, start_dim = 2)
+          xc = torch_cat(
+            list(
+              torch_flatten(x$demo, start_dim = 2),
+              act_flatten
+            ),
+            dim = 2
+          )
+        } else {
+          xc = torch_flatten(x$demo, start_dim = 2)
+        }
+      } else {
+        stop("Unsupported input shape.")
+      }
     } else {
-      stop("Unsupported input shape.")
+      if (length(x$act$shape) == 3) {
+        stop("Singletons not yet supported.")
+      } 
+      xc = torch_flatten(self$act_reducer(x$act), start_dim = 2)
     }
     xcl1 = xc |> 
       self$cat_layer_1()
-
-    if (length(x$demo$shape) == 2) {
+    if (is_singleton) {
       torch_cat(
         map(
           seq_along(self$outputs),
