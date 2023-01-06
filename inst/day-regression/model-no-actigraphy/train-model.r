@@ -128,7 +128,7 @@ if (find_lr) {
 
   records = lr_finder(lr_model, dl, verbose = TRUE)
   plot(records)
-
+}
 
 print(date())
 
