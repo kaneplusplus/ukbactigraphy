@@ -62,7 +62,7 @@ DemoActigraphyModel <-  nn_module(
             nn_sequential(
               nn_linear(self$x_width, self$x_width),
               nn_linear(self$x_width, nrow(xl)),
-              nn_softmax(1),
+              nn_softmax(2),
             )
           }
         }
@@ -111,6 +111,7 @@ DemoActigraphyModel <-  nn_module(
         dim = 1
       )
     } else {
+      browser()
       torch_cat(
         map(
           seq_along(self$outputs),
