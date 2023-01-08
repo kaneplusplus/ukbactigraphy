@@ -111,7 +111,6 @@ DemoActigraphyModel <-  nn_module(
         dim = 1
       )
     } else {
-      browser()
       torch_cat(
         map(
           seq_along(self$outputs),
