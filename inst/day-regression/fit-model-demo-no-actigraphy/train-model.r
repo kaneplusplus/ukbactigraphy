@@ -8,7 +8,7 @@ library(itertools)
 library(foreach)
 library(purrr)
 library(devtools)
-
+document()
 
 num_workers = 3
 plan(multicore, workers = num_workers)
@@ -54,13 +54,6 @@ test_ads = Demo24DataSet(
   device = device
 )
 
-my_loss = function(input, target) {
-  if (length(target$shape == 3)) {
-    target = target$flatten(start_dim = 2)
-  }
-  nnf_mse_loss(input, target)
-}
-
 if (!dir.exists("checkpoint")) {
   dir.create("checkpoint")
 }
@@ -71,7 +64,7 @@ if (!dir.exists("logging")) {
 make_model_gen = function() {
   model = DemoActigraphyModel |>
     setup(
-      loss = my_loss,
+      loss = ukb_wakeful_loss,
       optimizer = optim_adam,
     ) |>
     set_hparams(
