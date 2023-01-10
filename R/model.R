@@ -46,6 +46,7 @@ DemoActigraphyModel <-  nn_module(
     self$y_contr_map <- y_contr_map
     self$act_reducer <- act_reducer
     self$x_width <- x_width
+    self$cat_layer_0 = nn_linear(self$x_width, self$x_width)
     self$cat_layer_1 = nn_linear(self$x_width, self$x_width)
     ycm = self$y_contr_map
     self$outputs = nn_module_list(
@@ -101,6 +102,7 @@ DemoActigraphyModel <-  nn_module(
       xc = torch_flatten(self$act_reducer(x$act), start_dim = 2)
     }
     xcl1 = xc |> 
+      self$cat_layer_0() |>
       self$cat_layer_1()
     if (is_singleton) {
       torch_cat(
