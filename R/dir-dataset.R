@@ -143,11 +143,11 @@ DataFileThreeWindowSample = dataset(
   }
 )
 
-#' @importFrom torch torch_fft_fft
+#' @importFrom torch torch_fft_fft torch_log torch_sqrt
 #' @export
 get_spectrum <- function(x) {
   ret = torch_fft_fft(x, dim = 1, norm = "ortho") 
-  ret = torch_sqrt(ret$real^2 + ret$imag^2)
+  ret = torch_log(torch_sqrt(ret$real^2 + ret$imag^2))
   ret = ret[seq_len(ceiling(ret$shape[1] / 2)),]
   gc()
   return(ret)
@@ -155,7 +155,7 @@ get_spectrum <- function(x) {
 
 #' @importFrom torch dataset
 #' @importFrom dplyr select collect
-#' @importFrom torch torch_tensor torch_sqrt torch_transpose
+#' @importFrom torch torch_tensor torch_sqrt torch_transpose torch_log
 #' @export
 SpectralSignatureTensor = dataset(
   name = "SpectralSignatureTensor",
@@ -187,7 +187,7 @@ SpectralSignatureTensor = dataset(
       tl = FALSE
     }
     tm = torch_fft_fft(tm, norm = "ortho")
-    ret = torch_sqrt(tm$real^2 + tm$imag^2)
+    ret = torch_log(torch_sqrt(tm$real^2 + tm$imag^2))
     ret = 
       list(
         data = 
@@ -213,7 +213,7 @@ SpectralSignatureTensor = dataset(
       torch_tensor(dtype = self$dtype, device = self$device) |>
       torch_transpose(2, 1) |>
       torch_fft_fft(norm = "ortho")
-    ret = torch_sqrt(tm$real^2 + tm$imag^2)
+    ret = torch_log(torch_sqrt(tm$real^2 + tm$imag^2))
     ret = ret[,seq_len(ceiling(last(ret$shape) / 2))]
     gc()
     return(ret)
@@ -265,7 +265,7 @@ SpectralTensorAdaptor = dataset(
       tl = FALSE
     }
     tm = torch_fft_fft(tm, norm = "ortho")
-    ret = torch_sqrt(tm$real^2 + tm$imag^2)
+    ret = torch_log(torch_sqrt(tm$real^2 + tm$imag^2))
     ret = 
       list(
         data = 
@@ -330,6 +330,8 @@ DayHourSpectralSignatureDataSet = dataset(
 )
 
 #' @importFrom arrow read_parquet
+#' @importFrom torch torch_tensor torch_transpose torch_fft_fft torch_log
+#' torch_sqrt
 #' @export
 DayHourSpectralSignature = dataset(
   name = "DayHourSpectralSignature",
@@ -356,7 +358,7 @@ DayHourSpectralSignature = dataset(
             torch_tensor(dtype = self$dtype, device = self$device) |>
             torch_transpose(2, 1) |>
             torch_fft_fft(norm = "ortho", dim = 2) |>
-            (\(x) torch_sqrt(x$real^2 + x$imag^2)[,1:self$clip])()
+            (\(x) torch_log(torch_sqrt(x$real^2 + x$imag^2)[,1:self$clip]))()
         )
       ) 
     torch_stack(ret$spec_sig, dim = 1)

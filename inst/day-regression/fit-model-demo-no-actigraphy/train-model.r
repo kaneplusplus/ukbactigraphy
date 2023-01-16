@@ -8,7 +8,7 @@ library(itertools)
 library(foreach)
 library(purrr)
 library(devtools)
-document()
+
 
 num_workers = 3
 plan(multicore, workers = num_workers)
@@ -91,7 +91,7 @@ fit_model = function(model, chunk) {
         num_workers = num_workers,
         worker_packages = c("ukbactigraphy", "tibble", "dplyr")
       ),
-      epochs = 2,
+      epochs = 10,
       valid_data = dataloader(
         test_ads,
         batch_size = 1000,
