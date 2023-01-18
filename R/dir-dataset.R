@@ -147,7 +147,7 @@ DataFileThreeWindowSample = dataset(
 #' @export
 get_spectrum <- function(x) {
   ret = torch_fft_fft(x, dim = 1, norm = "ortho") 
-  ret = torch_log(torch_sqrt(ret$real^2 + ret$imag^2))
+  ret = torch_log(torch_sqrt(ret$real^2 + ret$imag^2) + 1.)
   ret = ret[seq_len(ceiling(ret$shape[1] / 2)),]
   gc()
   return(ret)
@@ -187,7 +187,7 @@ SpectralSignatureTensor = dataset(
       tl = FALSE
     }
     tm = torch_fft_fft(tm, norm = "ortho")
-    ret = torch_log(torch_sqrt(tm$real^2 + tm$imag^2))
+    ret = torch_log(torch_sqrt(tm$real^2 + tm$imag^2) + 1.)
     ret = 
       list(
         data = 
@@ -213,7 +213,7 @@ SpectralSignatureTensor = dataset(
       torch_tensor(dtype = self$dtype, device = self$device) |>
       torch_transpose(2, 1) |>
       torch_fft_fft(norm = "ortho")
-    ret = torch_log(torch_sqrt(tm$real^2 + tm$imag^2))
+    ret = torch_log(torch_sqrt(tm$real^2 + tm$imag^2) + 1.)
     ret = ret[,seq_len(ceiling(last(ret$shape) / 2))]
     gc()
     return(ret)
@@ -265,7 +265,7 @@ SpectralTensorAdaptor = dataset(
       tl = FALSE
     }
     tm = torch_fft_fft(tm, norm = "ortho")
-    ret = torch_log(torch_sqrt(tm$real^2 + tm$imag^2))
+    ret = torch_log(torch_sqrt(tm$real^2 + tm$imag^2) + 1.)
     ret = 
       list(
         data = 
@@ -358,7 +358,7 @@ DayHourSpectralSignature = dataset(
             torch_tensor(dtype = self$dtype, device = self$device) |>
             torch_transpose(2, 1) |>
             torch_fft_fft(norm = "ortho", dim = 2) |>
-            (\(x) torch_log(torch_sqrt(x$real^2 + x$imag^2)[,1:self$clip]))()
+            (\(x) torch_log(torch_sqrt(x$real^2 + x$imag^2)[,1:self$clip] + 1.))()
         )
       ) 
     torch_stack(ret$spec_sig, dim = 1)
