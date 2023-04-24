@@ -10,10 +10,10 @@ library(purrr)
 library(devtools)
 
 
-num_workers = 3
+num_workers = 7
 plan(multicore, workers = num_workers)
 device = "gpu"
-batch_size = 32
+batch_size = 64
 lr = 1e-4
 
 find_lr = FALSE
@@ -86,15 +86,15 @@ fit_model = function(model, chunk) {
     fit(
       data = dataloader(
         train_ads,
-        batch_size = 32,
+        batch_size = 16,
         shuffle = TRUE,
         num_workers = num_workers,
         worker_packages = c("ukbactigraphy", "tibble", "dplyr")
       ),
-      epochs = 10,
+      epochs = 4,
       valid_data = dataloader(
         test_ads,
-        batch_size = 1000,
+        batch_size = 16,
         num_workers = num_workers,
         worker_packages = c("ukbactigraphy", "tibble", "dplyr"),
       ),

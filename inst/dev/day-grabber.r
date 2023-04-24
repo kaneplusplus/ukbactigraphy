@@ -21,6 +21,13 @@ pss = DayHourSpectralSignature(
 
 pss$.getitem(1) |> system.time()
 
+pss = Day5MinSpectralSignature(
+  open_dataset(file.path("parquet-subset", dir("parquet-subset")[4])),
+  device = device
+)
+
+b = pss$.getitem(1)
+
 device = "mps"
 psc = DayHourSpectralSignatureDataSet(
   open_dataset("parquet-subset"), 

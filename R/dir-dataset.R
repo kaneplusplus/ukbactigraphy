@@ -368,6 +368,58 @@ DayHourSpectralSignature = dataset(
   }
 )
 
+downsample = function(sig, width = 10) {
+  ret = torch_conv1d(
+    torch_reshape(sig, c(sig$shape[1], 1, sig$shape[2])),
+    torch_tensor(rep(1/width, width), device = sig$device) |>
+      torch_reshape(c(1, 1, width)),
+  )
+  ret = torch_reshape(ret, c(ret$shape[1], ret$shape[3]))
+  ret = ret[,seq(1, ret$shape[2], by = width)] 
+}
+
+#' @importFrom arrow read_parquet
+#' @importFrom torch torch_tensor torch_transpose torch_fft_fft torch_log
+#' torch_sqrt
+#' @export
+Day5MinSpectralSignature = dataset(
+  name = "Day5MinSpectralSignature",
+  initialize = function(dsg, device = NULL, clip = 10000,
+                        dtype = torch_float32()) {
+    self$dsg = dsg
+    self$filter_len = 3
+    self$clip = clip
+    self$device = device
+    self$dtype = dtype
+  },
+  .getitem = function(index) {
+    ret = get_day(self$dsg, index) |> 
+      select(time, X:Z) |>
+      mutate(hour = hour(time)) |>
+      mutate(minute = minute(time)) |>
+      mutate(five_min = minute %/% 5) |>
+      group_by(hour, five_min) |>
+      group_nest() |>
+      mutate(
+        spec_sig = map(
+          data, 
+          ~ .x |> 
+            select(-time, -minute) |>
+            as.matrix() |>
+            torch_tensor(dtype = self$dtype, device = self$device) |>
+            torch_transpose(2, 1) |>
+            torch_fft_fft(norm = "ortho", dim = 2) |>
+            (\(x) torch_log(torch_sqrt(x$real^2+x$imag^2)[,1:self$clip]+1.))()|>
+            downsample()
+        )
+      ) 
+    torch_stack(ret$spec_sig, dim = 1)
+  },
+  .length = function() {
+    len_full_days(self$dsg)
+  }
+)
+
 
 #' @importFrom torch torch_cat
 #' @export
@@ -431,6 +483,92 @@ Demo24DataSet = dataset(
     return(nrow(self$data))
   }
 )
+
+#' @importFrom torch torch_cat
+#' @importFrom arrow open_dataset
+#' @export
+Actigraphy24DataSet = dataset(
+  name = "Actigraphy24DataSet",
+  initialize = function(y, x, user, ss, ss_index, data, 
+                        dtype = NULL, device = NULL, requires_grad = FALSE,
+                        pin_memory = FALSE) {
+    self$y = y
+    self$x = x
+    self$user = user
+    self$ss = ss
+    self$ss_index = ss_index
+    self$data = data
+    self$dtype = dtype
+    self$device = device
+    self$requires_grad = requires_grad
+    self$pin_memory = pin_memory
+    if (!is.null(x)) {
+      self$x_contr_map = model_tensor(
+          self$data[1, c(self$x, self$user)],
+          index = self$user,
+          dtype = self$dtype,
+          device = self$device,
+          requires_grad = self$requires_grad,
+          pin_memory = self$pin_memory
+        )$contr_level_map
+    } else {
+      self$x_contr_map = NULL
+    }
+    self$y_contr_map = model_tensor(
+      self$data[1, c(self$y, self$user)], 
+      index = self$user,
+      dtype = self$dtype,
+      device = self$device,
+      requires_grad = self$requires_grad,
+      pin_memory = self$pin_memory
+    )$contr_level_map 
+  },
+  .getitem = function(index) {
+    y = model_tensor(
+      self$data[index, c(self$y, self$user)], 
+      index = self$user,
+      dtype = self$dtype,
+      device = self$device,
+      requires_grad = self$requires_grad,
+      pin_memory = self$pin_memory
+    ) |> to_tensor()
+    if (!is.null(self$x_contr_map)) {
+      x = model_tensor(
+        self$data[index, c(self$x, self$user)], 
+        index = self$user,
+        dtype = self$dtype,
+        device = self$device,
+        requires_grad = self$requires_grad,
+        pin_memory = self$pin_memory
+      ) |> to_tensor()
+    } else {
+      x = NULL
+    }
+    act = DayHourSpectralSignature(
+      open_dataset(self$data[[self$ss]][index])
+    )$.getitem(self$data[[self$ss_index]][index])
+    gc()
+    if (is.null(x)) {
+      return(
+        list(
+          x = list(act = act),
+          y = y
+        )
+      )
+    } else {
+      return(
+        list(
+          x = list(demo = x, act = act),
+          y = y
+        )
+      )
+    }
+  },
+  .length = function() {
+    return(nrow(self$data))
+  }
+)
+
 
 #' @importFrom torch torch_cat
 #' @importFrom arrow open_dataset
