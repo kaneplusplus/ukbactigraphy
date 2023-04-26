@@ -2,17 +2,18 @@
 #' @export
 SpectralSignatureReducer <- nn_module(
   "SpectralSignatureReducer",
-  initialize = function(width, l2_width = 1000, l3_width = 100) {
+  initialize = function(width, l2_width = 8400, l3_width = 100) {
     self$width = width
     self$initialized = FALSE
     self$l2_width = l2_width
     self$l3_width = l3_width
     self$nn1 = nn_sequential(
       nn_linear(self$width, self$l2_width),
+      nn_dropout(0.2),
       nn_linear(self$l2_width, self$l3_width)
     )
     self$nn2 = nn_sequential(
-      nn_linear(self$l3_width * 24 * 3, 100)
+      nn_linear(self$l3_width * 60 / 5 * 24 * 3, 100)
     )
   },
   forward = function(x) {
