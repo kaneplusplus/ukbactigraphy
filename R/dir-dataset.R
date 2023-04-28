@@ -420,7 +420,7 @@ Day5MinSpectralSignature = dataset(
   }
 )
 
-#' @importFrom torch torch_cat
+#' @importFrom torch torch_cat nnf_pad
 #' @importFrom arrow open_dataset
 #' @export
 Actigraphy24DataSet = dataset(
