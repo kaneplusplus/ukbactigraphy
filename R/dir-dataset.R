@@ -483,6 +483,10 @@ Actigraphy24DataSet = dataset(
     act = DayHourSpectralSignature(
       open_dataset(self$data[[self$ss]][index])
     )$.getitem(self$data[[self$ss_index]][index])
+    if (act$shape[length(act$shape)] != 1000) {
+      pl = 1000 - act$shape[length(act$shape)]
+      act = nnf_pad(act, c(pl, 0), mode = "constant")
+    }
     gc()
     if (is.null(x)) {
       return(
@@ -568,6 +572,7 @@ Actigraphy5MinDataSet = dataset(
     act = Day5MinSpectralSignature(
       open_dataset(self$data[[self$ss]][index])
     )$.getitem(self$data[[self$ss_index]][index])
+    browser()
     gc()
     if (is.null(x)) {
       return(
