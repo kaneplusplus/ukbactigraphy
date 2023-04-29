@@ -420,7 +420,7 @@ Day5MinSpectralSignature = dataset(
   }
 )
 
-#' @importFrom torch torch_cat nnf_pad
+#' @importFrom torch torch_cat 
 #' @importFrom arrow open_dataset
 #' @export
 Actigraphy24DataSet = dataset(
@@ -483,10 +483,6 @@ Actigraphy24DataSet = dataset(
     act = DayHourSpectralSignature(
       open_dataset(self$data[[self$ss]][index])
     )$.getitem(self$data[[self$ss_index]][index])
-    if (act$shape[length(act$shape)] != 1000) {
-      pl = 1000 - act$shape[length(act$shape)]
-      act = nnf_pad(act, c(pl, 0), mode = "constant")
-    }
     gc()
     if (is.null(x)) {
       return(
@@ -509,7 +505,7 @@ Actigraphy24DataSet = dataset(
   }
 )
 
-#' @importFrom torch torch_cat
+#' @importFrom torch torch_cat nnf_pad
 #' @importFrom arrow open_dataset
 #' @export
 Actigraphy5MinDataSet = dataset(
@@ -572,6 +568,10 @@ Actigraphy5MinDataSet = dataset(
     act = Day5MinSpectralSignature(
       open_dataset(self$data[[self$ss]][index])
     )$.getitem(self$data[[self$ss_index]][index])
+    if (act$shape[length(act$shape)] != 1000) {
+      pl = 1000 - act$shape[length(act$shape)]
+      act = nnf_pad(act, c(pl, 0), mode = "constant")
+    }
     gc()
     if (is.null(x)) {
       return(
