@@ -572,7 +572,6 @@ Actigraphy5MinDataSet = dataset(
     act = Day5MinSpectralSignature(
       open_dataset(self$data[[self$ss]][index])
     )$.getitem(self$data[[self$ss_index]][index])
-    browser()
     gc()
     if (is.null(x)) {
       return(
