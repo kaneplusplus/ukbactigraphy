@@ -380,7 +380,7 @@ downsample = function(sig, width = 10) {
 
 #' @importFrom arrow read_parquet
 #' @importFrom torch torch_tensor torch_transpose torch_fft_fft torch_log
-#' torch_sqrt
+#  nnf_pad torch_sqrt
 #' @export
 Day5MinSpectralSignature = dataset(
   name = "Day5MinSpectralSignature",
@@ -413,6 +413,14 @@ Day5MinSpectralSignature = dataset(
             downsample()
         )
       ) 
+    length_correct = map_lgl(ret$spec_sig, ~ .x$shape[length(.x$shape)] != 1000)
+    if (any(!length_correct)) {
+      for (fix_ind in which(!length_correct)) {
+        fix_len = 1000 - last(ret$spec_sig[fix_ind]$shape)
+        ret$spec_sig[[fix_ind]] = 
+          nnf_pad(ret$spec_sig[[fix_ind]], c(fix_len, 0))
+      }
+    }
     torch_stack(ret$spec_sig, dim = 1)
   },
   .length = function() {
