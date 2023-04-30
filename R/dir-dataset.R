@@ -417,8 +417,13 @@ Day5MinSpectralSignature = dataset(
     if (any(!length_correct)) {
       for (fix_ind in which(!length_correct)) {
         fix_len = 1000 - last(ret$spec_sig[fix_ind]$shape)
+        print("spec sig shape")
+        print(ret$spec_sig[[fix_ind]]$shape)
+        print("fix size")
+        print(c(fix_len, 0))
         ret$spec_sig[[fix_ind]] = 
-          nnf_pad(ret$spec_sig[[fix_ind]], c(fix_len, 0))
+          nnf_pad(input = ret$spec_sig[[fix_ind]], pad = c(fix_len, 0),
+                  mode = "constant", value = 0.)
       }
     }
     torch_stack(ret$spec_sig, dim = 1)
@@ -578,7 +583,12 @@ Actigraphy5MinDataSet = dataset(
     )$.getitem(self$data[[self$ss_index]][index])
     if (act$shape[length(act$shape)] != 1000) {
       pl = 1000 - act$shape[length(act$shape)]
-      act = nnf_pad(act, c(pl, 0), mode = "constant")
+      print("act shape")
+      print(act$shape)
+      print("pad")
+      print(c(pl, 0))
+      act = nnf_pad(input = act, pad = c(pl, 0), mode = "constant",
+                    value = 0.)
     }
     gc()
     if (is.null(x)) {
