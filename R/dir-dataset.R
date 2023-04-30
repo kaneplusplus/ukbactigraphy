@@ -581,7 +581,7 @@ Actigraphy5MinDataSet = dataset(
     act = Day5MinSpectralSignature(
       open_dataset(self$data[[self$ss]][index])
     )$.getitem(self$data[[self$ss_index]][index])
-    if (act$shape[length(act$shape)] != 1000) {
+    if (last(act$shape) != 1000) {
       pl = 1000 - act$shape[length(act$shape)]
       print("act shape")
       print(act$shape)
