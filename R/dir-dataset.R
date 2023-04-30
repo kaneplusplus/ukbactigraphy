@@ -413,7 +413,7 @@ Day5MinSpectralSignature = dataset(
             downsample()
         )
       ) 
-    length_correct = map_lgl(ret$spec_sig, ~ .x$shape[length(.x$shape)] != 1000)
+    length_correct = map_lgl(ret$spec_sig, ~ last(.x$shape) == 1000)
     if (any(!length_correct)) {
       for (fix_ind in which(!length_correct)) {
         fix_len = 1000 - last(ret$spec_sig[fix_ind]$shape)
