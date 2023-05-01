@@ -581,7 +581,7 @@ Actigraphy5MinDataSet = dataset(
     act = Day5MinSpectralSignature(
       open_dataset(self$data[[self$ss]][index])
     )$.getitem(self$data[[self$ss_index]][index])
-    if (!all(tail(act$shape, 3) != c(288, 3, 1000))) {
+    if (any(tail(act$shape, 3) != c(288, 3, 1000))) {
       saveRDS(index, "badindex.rds")
       pl = rev(c(288, 3, 1000) - tail(act$shape, 3))
       act = nnf_pad(input = act, pad = c(pl, 0), mode = "constant",
