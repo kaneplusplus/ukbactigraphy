@@ -413,16 +413,14 @@ Day5MinSpectralSignature = dataset(
             downsample()
         )
       ) 
-    length_correct = map_lgl(ret$spec_sig, ~ last(.x$shape) == 1000)
+    length_correct = map_lgl(ret$spec_sig, ~ all(.x$shape == c(3, 1000)))
     if (any(!length_correct)) {
+      saveRDS(index, "bad_ss_index.rds")
       for (fix_ind in which(!length_correct)) {
-        fix_len = 1000 - last(ret$spec_sig[fix_ind]$shape)
+        fix_len = rev(c(ret$spec_sig[fix_ind]$shape - c(3, 1000)))
         print("spec sig shape")
-        print(ret$spec_sig[[fix_ind]]$shape)
-        print("fix size")
-        print(c(fix_len, 0))
         ret$spec_sig[[fix_ind]] = 
-          nnf_pad(input = ret$spec_sig[[fix_ind]], pad = c(fix_len, 0),
+          nnf_pad(input = ret$spec_sig[[fix_ind]], pad = fix_len,
                   mode = "constant", value = 0.)
       }
     }
