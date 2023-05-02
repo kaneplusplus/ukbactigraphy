@@ -581,8 +581,10 @@ Actigraphy5MinDataSet = dataset(
     )$.getitem(self$data[[self$ss_index]][index])
     if (any(tail(act$shape, 3) != c(288, 3, 1000))) {
       saveRDS(index, "badindex.rds")
+      # Create padding according to torches goofy standard.
       pl = rev(c(288, 3, 1000) - tail(act$shape, 3))
-      act = nnf_pad(input = act, pad = c(pl, 0), mode = "constant",
+      pl = as.vector(t(cbind(rep(0, length(pl)), pl)))
+      act = nnf_pad(input = act, pad = pl, mode = "constant",
                     value = 0.)
     }
     gc()
