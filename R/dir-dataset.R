@@ -418,15 +418,15 @@ Day5MinSpectralSignature = dataset(
       saveRDS(index, "bad_ss_index.rds")
       for (fix_ind in which(!length_correct)) {
         fix_len = rev(c(ret$spec_sig[fix_ind]$shape - c(3, 1000)))
-        log("spec sig shape")
-        log(fix_ind)
-        log(ret$spec_sig[[fix_ind]]$shape)
-        log(fix_len)
+        log_msg("spec sig shape")
+        log_msg(fix_ind)
+        log_msg(ret$spec_sig[[fix_ind]]$shape)
+        log_msg(fix_len)
         ret$spec_sig[[fix_ind]] = 
           nnf_pad(input = ret$spec_sig[[fix_ind]], pad = fix_len,
                   mode = "constant", value = 0.)
-        log("after fix")
-        log(ret$spec_sig[[fix_ind]]$shape)
+        log_msg("after fix")
+        log_msg(ret$spec_sig[[fix_ind]]$shape)
       }
     }
     torch_stack(ret$spec_sig, dim = 1)
@@ -521,7 +521,7 @@ Actigraphy24DataSet = dataset(
   }
 )
 
-log = function(string, fn = "output.log") {
+log_msg = function(string, fn = "output.log") {
   fh = file(fn, open = "a")
   on.exit(close(fh))
   s = capture.output(print(string))
@@ -594,14 +594,14 @@ Actigraphy5MinDataSet = dataset(
     if (any(tail(act$shape, 3) != c(288, 3, 1000))) {
       saveRDS(index, "badindex.rds")
       # Create padding according to torches goofy standard.
-      log("5 min data set")
+      log_msg("5 min data set")
       pl = rev(c(288, 3, 1000) - tail(act$shape, 3))
       pl = as.vector(t(cbind(rep(0, length(pl)), pl)))
-      log(pl)
-      log(act$shape)
+      log_msg(pl)
+      log_msg(act$shape)
       act = nnf_pad(input = act, pad = pl, mode = "constant",
                     value = 0.)
-      log("after fix")
+      log_msg("after fix")
     }
     gc()
     if (is.null(x)) {
