@@ -524,7 +524,8 @@ Actigraphy24DataSet = dataset(
 log = function(string, fn = "output.log") {
   fh = file(fn, open = "a")
   on.exit(close(fh))
-  writeLines(string |> paste(collapse = " ") |> strwrap(), fh)
+  s = capture.output(print(string))
+  writeLines(s, fh)
 }
 
 #' @importFrom torch torch_cat nnf_pad
