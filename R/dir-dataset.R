@@ -175,7 +175,13 @@ SpectralSignatureTensor = dataset(
             torch_tensor(dtype = self$dtype, device = self$device) |>
             torch_transpose(2, 1) 
         ) |>
-        torch_stack(dim = 1)
+        torch_stack(dim = 1) |>
+        tryCatch(
+          error = function(e) {
+            cat("\nSpectralSignatureTensor::getitem()\n")
+            stop(e)
+          }
+        )
       tl = TRUE
     } else {
       tm = items$data |>
@@ -253,7 +259,13 @@ SpectralTensorAdaptor = dataset(
             torch_tensor(dtype = self$dtype, device = self$device) |>
             torch_transpose(2, 1) 
         ) |>
-        torch_stack(dim = 1)
+        torch_stack(dim = 1) |>
+        tryCatch(
+          error = function(e) {
+            cat("\nSpectralTensorAdaptor::getitem()\n")
+            stop(e)
+          }
+        )
       tl = TRUE
     } else {
       tm = items$data |>
@@ -361,7 +373,13 @@ DayHourSpectralSignature = dataset(
             (\(x) torch_log(torch_sqrt(x$real^2 + x$imag^2)[,1:self$clip] + 1.))()
         )
       ) 
-    torch_stack(ret$spec_sig, dim = 1)
+    torch_stack(ret$spec_sig, dim = 1) |>
+        tryCatch(
+          error = function(e) {
+            cat("\nDayHourSpectralSignature::getitem()\n")
+            stop(e)
+          }
+        )
   },
   .length = function() {
     len_full_days(self$dsg)
@@ -429,7 +447,13 @@ Day5MinSpectralSignature = dataset(
         log_msg(ret$spec_sig[[fix_ind]]$shape)
       }
     }
-    torch_stack(ret$spec_sig, dim = 1)
+    torch_stack(ret$spec_sig, dim = 1) |>
+        tryCatch(
+          error = function(e) {
+            cat("\nDay5MinSpectralSignature::getitem()\n")
+            stop(e)
+          }
+        )
   },
   .length = function() {
     len_full_days(self$dsg)
