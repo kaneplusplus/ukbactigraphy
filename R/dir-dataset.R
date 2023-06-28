@@ -452,13 +452,16 @@ Day5MinSpectralSignature = dataset(
             })()
         )
       ) 
-    torch_stack(ret$spec_sig, dim = 1) |>
+    gc()
+    ret = torch_stack(ret$spec_sig, dim = 1) |>
         tryCatch(
           error = function(e) {
             cat("\nDay5MinSpectralSignature::getitem()\n")
             stop(e)
           }
         )
+    gc()
+    ret
   },
   .length = function() {
     len_full_days(self$dsg)
