@@ -430,7 +430,9 @@ Day5MinSpectralSignature = dataset(
             (\(x) torch_log(torch_sqrt(x$real^2+x$imag^2)[,1:self$clip]+1.))()|>
             downsample() |>
             (\(ts){
-              if (!all(ts$shape == c(3, 1000))) {
+              if (!(length(ts$shape == 2) &&
+                    ts$shape[1] == 3 &&
+                    ts$shape[2] == 1000)) {
                 fix_len = rev(ts$shape - c(3, 1000))
                 log_msg("spec sig shape")
                 log_msg(ts$shape)
@@ -440,7 +442,9 @@ Day5MinSpectralSignature = dataset(
                 log_msg("after fix")
                 log_msg(ts$shape)
               }
-              if (!all(ts$shape == c(3, 1000))) {
+              if (!(length(ts$shape == 2) && 
+                    ts$shape[1] == 3 &&
+                    ts$shape[2] == 1000)) {
                 log_msg("fix failed reverting to zeros.")
                 ts = torch_tensor(
                   matrix(rep(0.0, 3*1000), nrow = 3, ncol = 10000),
