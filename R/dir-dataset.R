@@ -428,25 +428,27 @@ Day5MinSpectralSignature = dataset(
             torch_transpose(2, 1) |>
             torch_fft_fft(norm = "ortho", dim = 2) |>
             (\(x) torch_log(torch_sqrt(x$real^2+x$imag^2)[,1:self$clip]+1.))()|>
-            downsample()
+            downsample() |>
+            (\(ts){
+              if (!all(ts$shape == c(3, 1000))) {
+                fix_len = rev(ts$shape - c(3, 1000))
+                log_msg("spec sig shape")
+                log_msg(ts$shape)
+                log_msg(fix_len)
+                ts = nnf_pad(input = ts, pad = fix_len,
+                             mode = "constant", value = 0.)
+                log_msg("after fix")
+                log_msg(ts$shape)
+              }
+              if (!all(ts$shape == c(3, 1000))) {
+                ts = torch_tensor(
+                  matrix(rep(0.0, 3*1000), nrow = 3, ncol = 10000),
+                  dtype = dtype, device = device)
+              }
+              ts
+            })()
         )
       ) 
-    length_correct = map_lgl(ret$spec_sig, ~ all(.x$shape == c(3, 1000)))
-    if (any(!length_correct)) {
-      saveRDS(index, "bad_ss_index.rds")
-      for (fix_ind in which(!length_correct)) {
-        fix_len = rev(c(ret$spec_sig[fix_ind]$shape - c(3, 1000)))
-        log_msg("spec sig shape")
-        log_msg(fix_ind)
-        log_msg(ret$spec_sig[[fix_ind]]$shape)
-        log_msg(fix_len)
-        ret$spec_sig[[fix_ind]] = 
-          nnf_pad(input = ret$spec_sig[[fix_ind]], pad = fix_len,
-                  mode = "constant", value = 0.)
-        log_msg("after fix")
-        log_msg(ret$spec_sig[[fix_ind]]$shape)
-      }
-    }
     torch_stack(ret$spec_sig, dim = 1) |>
         tryCatch(
           error = function(e) {
