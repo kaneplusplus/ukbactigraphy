@@ -448,7 +448,7 @@ Day5MinSpectralSignature = dataset(
                 log_msg("fix failed reverting to zeros.")
                 ts = torch_tensor(
                   matrix(rep(0.0, 3*1000), nrow = 3, ncol = 10000),
-                  dtype = dtype, device = device)
+                  dtype = self$dtype, device = self$device)
                 log_msg("after failed fix")
                 log_msg(ts$shape)
               }
