@@ -437,10 +437,15 @@ Day5MinSpectralSignature = dataset(
                 log_msg("spec sig shape")
                 log_msg(ts$shape)
                 log_msg(fix_len)
-                ts = nnf_pad(input = ts, pad = fix_len,
-                             mode = "constant", value = 0.)
-                log_msg("after fix")
-                log_msg(ts$shape)
+                if (any(fix_len < 0)) {
+                  log_msg("bad fix len")
+                  fix_len[fix_len < 0] = 0
+                } else {
+                  ts = nnf_pad(input = ts, pad = fix_len,
+                               mode = "constant", value = 0.)
+                  log_msg("after fix")
+                  log_msg(ts$shape)
+                }
               }
               if (!(length(ts$shape == 2) && 
                     ts$shape[1] == 3 &&
